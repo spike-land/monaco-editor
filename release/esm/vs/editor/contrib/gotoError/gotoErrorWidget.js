@@ -32,6 +32,7 @@ import { MenuId, IMenuService } from '../../../platform/actions/common/actions.j
 import { IContextKeyService } from '../../../platform/contextkey/common/contextkey.js';
 import { createAndFillInActionBarActions } from '../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
+import { splitLines } from '../../../base/common/strings.js';
 class MessageWidget {
     constructor(parent, editor, onRelatedInformation, _openerService) {
         this._openerService = _openerService;
@@ -43,7 +44,7 @@ class MessageWidget {
         const domNode = document.createElement('div');
         domNode.className = 'descriptioncontainer';
         this._messageBlock = document.createElement('div');
-        dom.addClass(this._messageBlock, 'message');
+        this._messageBlock.classList.add('message');
         this._messageBlock.setAttribute('aria-live', 'assertive');
         this._messageBlock.setAttribute('role', 'alert');
         domNode.appendChild(this._messageBlock);
@@ -84,7 +85,7 @@ class MessageWidget {
                 sourceAndCodeLength += code.value.length;
             }
         }
-        const lines = message.split(/\r\n|\r|\n/g);
+        const lines = splitLines(message);
         this._lines = lines.length;
         this._longestLineLength = 0;
         for (const line of lines) {
@@ -104,19 +105,19 @@ class MessageWidget {
         }
         if (source || code) {
             const detailsElement = document.createElement('span');
-            dom.addClass(detailsElement, 'details');
+            detailsElement.classList.add('details');
             lastLineElement.appendChild(detailsElement);
             if (source) {
                 const sourceElement = document.createElement('span');
                 sourceElement.innerText = source;
-                dom.addClass(sourceElement, 'source');
+                sourceElement.classList.add('source');
                 detailsElement.appendChild(sourceElement);
             }
             if (code) {
                 if (typeof code === 'string') {
                     const codeElement = document.createElement('span');
                     codeElement.innerText = `(${code})`;
-                    dom.addClass(codeElement, 'code');
+                    codeElement.classList.add('code');
                     detailsElement.appendChild(codeElement);
                 }
                 else {
@@ -137,12 +138,12 @@ class MessageWidget {
         this._editor.applyFontInfo(this._relatedBlock);
         if (isNonEmptyArray(relatedInformation)) {
             const relatedInformationNode = this._relatedBlock.appendChild(document.createElement('div'));
-            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(51 /* lineHeight */) * 0.66)}px`;
+            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(53 /* lineHeight */) * 0.66)}px`;
             this._lines += 1;
             for (const related of relatedInformation) {
                 let container = document.createElement('div');
                 let relatedResource = document.createElement('a');
-                dom.addClass(relatedResource, 'filename');
+                relatedResource.classList.add('filename');
                 relatedResource.innerText = `${getBaseLabel(related.resource)}(${related.startLineNumber}, ${related.startColumn}): `;
                 relatedResource.title = getPathLabel(related.resource, undefined);
                 this._relatedDiagnostics.set(relatedResource, related);
@@ -154,7 +155,7 @@ class MessageWidget {
                 relatedInformationNode.appendChild(container);
             }
         }
-        const fontInfo = this._editor.getOption(36 /* fontInfo */);
+        const fontInfo = this._editor.getOption(38 /* fontInfo */);
         const scrollWidth = Math.ceil(fontInfo.typicalFullwidthCharacterWidth * this._longestLineLength * 0.75);
         const scrollHeight = fontInfo.lineHeight * this._lines;
         this._scrollable.setScrollDimensions({ scrollWidth, scrollHeight });
@@ -238,7 +239,7 @@ let MarkerNavigationWidget = class MarkerNavigationWidget extends PeekViewWidget
     }
     _fillHead(container) {
         super._fillHead(container);
-        this._disposables.add(this._actionbarWidget.actionRunner.onDidBeforeRun(e => this.editor.focus()));
+        this._disposables.add(this._actionbarWidget.actionRunner.onBeforeRun(e => this.editor.focus()));
         const actions = [];
         const menu = this._menuService.createMenu(MarkerNavigationWidget.TitleMenu, this._contextKeyService);
         createAndFillInActionBarActions(menu, undefined, actions);
@@ -253,7 +254,7 @@ let MarkerNavigationWidget = class MarkerNavigationWidget extends PeekViewWidget
     }
     _fillBody(container) {
         this._parentContainer = container;
-        dom.addClass(container, 'marker-widget');
+        container.classList.add('marker-widget');
         this._parentContainer.tabIndex = 0;
         this._parentContainer.setAttribute('role', 'tooltip');
         this._container = document.createElement('div');

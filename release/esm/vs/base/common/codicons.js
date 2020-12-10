@@ -4,15 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 import { codiconStartMarker } from './codicon.js';
 import { Emitter } from './event.js';
+import { localize } from '../../nls.js';
 class Registry {
     constructor() {
         this._icons = new Map();
         this._onDidRegister = new Emitter();
     }
     add(icon) {
-        if (!this._icons.has(icon.id)) {
+        const existing = this._icons.get(icon.id);
+        if (!existing) {
             this._icons.set(icon.id, icon);
             this._onDidRegister.fire(icon);
+        }
+        else if (icon.description) {
+            existing.description = icon.description;
         }
         else {
             console.error(`Duplicate registration of codicon ${icon.id}`);
@@ -30,8 +35,8 @@ class Registry {
 }
 const _registry = new Registry();
 export const iconRegistry = _registry;
-export function registerIcon(id, def, description) {
-    return new Codicon(id, def);
+export function registerCodicon(id, def, description) {
+    return new Codicon(id, def, description);
 }
 export class Codicon {
     constructor(id, definition, description) {
@@ -41,6 +46,8 @@ export class Codicon {
         _registry.add(this);
     }
     get classNames() { return 'codicon codicon-' + this.id; }
+    // classNamesArray is useful for migrating to ES6 classlist
+    get classNamesArray() { return ['codicon', 'codicon-' + this.id]; }
     get cssSelector() { return '.codicon.codicon-' + this.id; }
 }
 (function (Codicon) {
@@ -458,7 +465,19 @@ export class Codicon {
     Codicon.vmConnect = new Codicon('vm-connect', { character: '\\eba9' });
     Codicon.cloud = new Codicon('cloud', { character: '\\ebaa' });
     Codicon.merge = new Codicon('merge', { character: '\\ebab' });
+    Codicon.exportIcon = new Codicon('export', { character: '\\ebac' });
+    Codicon.graphLeft = new Codicon('graph-left', { character: '\\ebad' });
+    Codicon.magnet = new Codicon('magnet', { character: '\\ebae' });
+    Codicon.notebook = new Codicon('notebook', { character: '\\ebaf' });
+    Codicon.redo = new Codicon('redo', { character: '\\ebb0' });
+    Codicon.checkAll = new Codicon('check-all', { character: '\\ebb1' });
+    Codicon.pinnedDirty = new Codicon('pinned-dirty', { character: '\\ebb2' });
+    Codicon.passFilled = new Codicon('pass-filled', { character: '\\ebb3' });
+    Codicon.circleLargeFilled = new Codicon('circle-large-filled', { character: '\\ebb4' });
+    Codicon.circleLargeOutline = new Codicon('circle-large-outline', { character: '\\ebb5' });
+    Codicon.dropDownButton = new Codicon('drop-down-button', Codicon.chevronDown.definition, localize('dropDownButton', 'Icon for drop down buttons.'));
 })(Codicon || (Codicon = {}));
+// common icons
 const escapeCodiconsRegex = /(\\)?\$\([a-z0-9\-]+?(?:~[a-z0-9\-]*?)?\)/gi;
 export function escapeCodicons(text) {
     return text.replace(escapeCodiconsRegex, (match, escaped) => escaped ? match : `\\${match}`);
@@ -467,18 +486,6 @@ const markdownEscapedCodiconsRegex = /\\\$\([a-z0-9\-]+?(?:~[a-z0-9\-]*?)?\)/gi;
 export function markdownEscapeEscapedCodicons(text) {
     // Need to add an extra \ for escaping in markdown
     return text.replace(markdownEscapedCodiconsRegex, match => `\\${match}`);
-}
-export const renderCodiconsRegex = /(\\)?\$\((([a-z0-9\-]+?)(?:~([a-z0-9\-]*?))?)\)/gi;
-/**
- * @deprecated Use `renderCodiconsAsElement` instead
- */
-export function renderCodicons(text) {
-    return text.replace(renderCodiconsRegex, (_, escaped, codicon, name, animation) => {
-        // If the class for codicons is changed, it should also be updated in src\vs\base\browser\markdownRenderer.ts
-        return escaped
-            ? `$(${codicon})`
-            : `<span class="codicon codicon-${name}${animation ? ` codicon-animation-${animation}` : ''}"></span>`;
-    });
 }
 const stripCodiconsRegex = /(\s)?(\\)?\$\([a-z0-9\-]+?(?:~[a-z0-9\-]*?)?\)(\s)?/gi;
 export function stripCodicons(text) {

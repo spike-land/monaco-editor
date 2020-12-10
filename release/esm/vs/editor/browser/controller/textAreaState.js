@@ -97,14 +97,14 @@ export class TextAreaState {
             let potentialEmojiInput = null;
             if (currentSelectionStart === currentValue.length) {
                 // emoji potentially inserted "somewhere" after the previous selection => it should appear at the end of `currentValue`
-                if (strings.startsWith(currentValue, previousValue)) {
+                if (currentValue.startsWith(previousValue)) {
                     // only if all of the old text is accounted for
                     potentialEmojiInput = currentValue.substring(previousValue.length);
                 }
             }
             else {
                 // emoji potentially inserted "somewhere" before the previous selection => it should appear at the start of `currentValue`
-                if (strings.endsWith(currentValue, previousValue)) {
+                if (currentValue.endsWith(previousValue)) {
                     // only if all of the old text is accounted for
                     potentialEmojiInput = currentValue.substring(0, currentValue.length - previousValue.length);
                 }

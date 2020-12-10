@@ -192,6 +192,9 @@ export class TextModel extends Disposable {
         this._isDisposed = true;
         super.dispose();
         this._isDisposing = false;
+        // Manually release reference to previous text buffer to avoid large leaks
+        // in case someone leaks a TextModel reference
+        this._buffer = createTextBuffer('', this._options.defaultEOL);
     }
     _assertNotDisposed() {
         if (this._isDisposed) {
@@ -383,7 +386,7 @@ export class TextModel extends Disposable {
         this.updateOptions({
             insertSpaces: guessedIndentation.insertSpaces,
             tabSize: guessedIndentation.tabSize,
-            indentSize: guessedIndentation.tabSize,
+            indentSize: guessedIndentation.tabSize, // TODO@Alex: guess indentSize independent of tabSize
         });
     }
     static _normalizeIndentationFromWhitespace(str, indentSize, insertSpaces) {
@@ -525,6 +528,12 @@ export class TextModel extends Disposable {
     getEOL() {
         this._assertNotDisposed();
         return this._buffer.getEOL();
+    }
+    getEndOfLineSequence() {
+        this._assertNotDisposed();
+        return (this._buffer.getEOL() === '\n'
+            ? 0 /* LF */
+            : 1 /* CRLF */);
     }
     getLineMinColumn(lineNumber) {
         this._assertNotDisposed();
@@ -842,6 +851,9 @@ export class TextModel extends Disposable {
     pushStackElement() {
         this._commandManager.pushStackElement();
     }
+    popStackElement() {
+        this._commandManager.popStackElement();
+    }
     pushEOL(eol) {
         const currentEOL = (this.getEOL() === '\n' ? 0 /* LF */ : 1 /* CRLF */);
         if (currentEOL === eol) {
@@ -1067,13 +1079,13 @@ export class TextModel extends Disposable {
         return (result.reverseEdits === null ? undefined : result.reverseEdits);
     }
     undo() {
-        this._undoRedoService.undo(this.uri);
+        return this._undoRedoService.undo(this.uri);
     }
     canUndo() {
         return this._undoRedoService.canUndo(this.uri);
     }
     redo() {
-        this._undoRedoService.redo(this.uri);
+        return this._undoRedoService.redo(this.uri);
     }
     canRedo() {
         return this._undoRedoService.canRedo(this.uri);
@@ -1378,11 +1390,14 @@ export class TextModel extends Disposable {
             ranges: [{ fromLineNumber: 1, toLineNumber: this.getLineCount() }]
         });
     }
-    hasSemanticTokens() {
+    hasCompleteSemanticTokens() {
         return this._tokens2.isComplete();
     }
+    hasSomeSemanticTokens() {
+        return !this._tokens2.isEmpty();
+    }
     setPartialSemanticTokens(range, tokens) {
-        if (this.hasSemanticTokens()) {
+        if (this.hasCompleteSemanticTokens()) {
             return;
         }
         const changedRange = this._tokens2.setPartial(range, tokens);

@@ -58,7 +58,7 @@ function flatten(bucket, entries, overrideContainerLabel) {
             containerName: entry.containerName || overrideContainerLabel,
             range: entry.range,
             selectionRange: entry.selectionRange,
-            children: undefined,
+            children: undefined, // we flatten it...
         });
         if (entry.children) {
             flatten(bucket, entry.children, entry.name);

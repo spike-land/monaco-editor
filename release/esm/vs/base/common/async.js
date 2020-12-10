@@ -210,10 +210,10 @@ export class IntervalTimer {
     }
 }
 export class RunOnceScheduler {
-    constructor(runner, timeout) {
+    constructor(runner, delay) {
         this.timeoutToken = -1;
         this.runner = runner;
-        this.timeout = timeout;
+        this.timeout = delay;
         this.timeoutHandler = this.onTimeout.bind(this);
     }
     /**
@@ -238,6 +238,12 @@ export class RunOnceScheduler {
     schedule(delay = this.timeout) {
         this.cancel();
         this.timeoutToken = setTimeout(this.timeoutHandler, delay);
+    }
+    get delay() {
+        return this.timeout;
+    }
+    set delay(value) {
+        this.timeout = value;
     }
     /**
      * Returns true if scheduled.

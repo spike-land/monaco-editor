@@ -8,13 +8,21 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import './media/quickInput.css';
 import * as dom from '../../../browser/dom.js';
 import { dispose } from '../../../common/lifecycle.js';
 import { matchesFuzzyCodiconAware, parseCodicons } from '../../../common/codicon.js';
 import { compareAnything } from '../../../common/comparers.js';
 import { Emitter, Event } from '../../../common/event.js';
-import { assign } from '../../../common/objects.js';
 import { StandardKeyboardEvent } from '../../../browser/keyboardEvent.js';
 import { IconLabel } from '../../../browser/ui/iconLabel/iconLabel.js';
 import { HighlightedLabel } from '../../../browser/ui/highlightedlabel/highlightedLabel.js';
@@ -33,7 +41,7 @@ class ListElement {
         this.hidden = false;
         this._onChecked = new Emitter();
         this.onChecked = this._onChecked.event;
-        assign(this, init);
+        Object.assign(this, init);
     }
     get checked() {
         return !!this._checked;
@@ -116,12 +124,7 @@ class ListElementRenderer {
         else {
             data.separator.style.display = 'none';
         }
-        if (element.separator) {
-            dom.addClass(data.entry, 'quick-input-list-separator-border');
-        }
-        else {
-            dom.removeClass(data.entry, 'quick-input-list-separator-border');
-        }
+        data.entry.classList.toggle('quick-input-list-separator-border', !!element.separator);
         // Actions
         data.actionBar.clear();
         const buttons = element.item.buttons;
@@ -131,20 +134,19 @@ class ListElementRenderer {
                 if (button.alwaysVisible) {
                     cssClasses = cssClasses ? `${cssClasses} always-visible` : 'always-visible';
                 }
-                const action = new Action(`id-${index}`, '', cssClasses, true, () => {
+                const action = new Action(`id-${index}`, '', cssClasses, true, () => __awaiter(this, void 0, void 0, function* () {
                     element.fireButtonTriggered({
                         button,
                         item: element.item
                     });
-                    return Promise.resolve();
-                });
+                }));
                 action.tooltip = button.tooltip || '';
                 return action;
             }), { icon: true, label: false });
-            dom.addClass(data.entry, 'has-actions');
+            data.entry.classList.add('has-actions');
         }
         else {
-            dom.removeClass(data.entry, 'has-actions');
+            data.entry.classList.remove('has-actions');
         }
     }
     disposeElement(element, index, data) {

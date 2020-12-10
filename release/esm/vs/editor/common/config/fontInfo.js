@@ -30,12 +30,12 @@ export class BareFontInfo {
      * @internal
      */
     static createFromValidatedSettings(options, zoomLevel, ignoreEditorZoom) {
-        const fontFamily = options.get(35 /* fontFamily */);
-        const fontWeight = options.get(39 /* fontWeight */);
-        const fontSize = options.get(38 /* fontSize */);
-        const fontFeatureSettings = options.get(37 /* fontLigatures */);
-        const lineHeight = options.get(51 /* lineHeight */);
-        const letterSpacing = options.get(48 /* letterSpacing */);
+        const fontFamily = options.get(37 /* fontFamily */);
+        const fontWeight = options.get(41 /* fontWeight */);
+        const fontSize = options.get(40 /* fontSize */);
+        const fontFeatureSettings = options.get(39 /* fontLigatures */);
+        const lineHeight = options.get(53 /* lineHeight */);
+        const letterSpacing = options.get(50 /* letterSpacing */);
         return BareFontInfo._create(fontFamily, fontWeight, fontSize, fontFeatureSettings, lineHeight, letterSpacing, zoomLevel, ignoreEditorZoom);
     }
     /**

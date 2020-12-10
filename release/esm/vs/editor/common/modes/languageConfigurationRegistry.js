@@ -6,7 +6,7 @@ import { Emitter } from '../../../base/common/event.js';
 import { toDisposable } from '../../../base/common/lifecycle.js';
 import * as strings from '../../../base/common/strings.js';
 import { DEFAULT_WORD_REGEXP, ensureValidWordDefinition } from '../model/wordHelper.js';
-import { IndentAction } from './languageConfiguration.js';
+import { IndentAction, AutoClosingPairs } from './languageConfiguration.js';
 import { createScopedLineTokens } from './supports.js';
 import { CharacterPairSupport } from './supports/characterPair.js';
 import { BracketElectricCharacterSupport } from './supports/electricCharacter.js';
@@ -162,11 +162,8 @@ export class LanguageConfigurationRegistryImpl {
         return value.characterPair || null;
     }
     getAutoClosingPairs(languageId) {
-        let characterPairSupport = this._getCharacterPairSupport(languageId);
-        if (!characterPairSupport) {
-            return [];
-        }
-        return characterPairSupport.getAutoClosingPairs();
+        const characterPairSupport = this._getCharacterPairSupport(languageId);
+        return new AutoClosingPairs(characterPairSupport ? characterPairSupport.getAutoClosingPairs() : []);
     }
     getAutoCloseBeforeSet(languageId) {
         let characterPairSupport = this._getCharacterPairSupport(languageId);
@@ -505,6 +502,10 @@ export class LanguageConfigurationRegistryImpl {
             return null;
         }
         const scopedLineTokens = this.getScopedLineTokens(model, range.startLineNumber, range.startColumn);
+        if (scopedLineTokens.firstCharOffset) {
+            // this line has mixed languages and indentation rules will not work
+            return null;
+        }
         const indentRulesSupport = this.getIndentRulesSupport(scopedLineTokens.languageId);
         if (!indentRulesSupport) {
             return null;

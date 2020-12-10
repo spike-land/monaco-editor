@@ -8,6 +8,7 @@ import { Selection } from '../core/selection.js';
 import { URI } from '../../../base/common/uri.js';
 import { TextChange, compressConsecutiveTextChanges } from './textChange.js';
 import * as buffer from '../../../base/common/buffer.js';
+import { basename } from '../../../base/common/resources.js';
 function uriGetComparisonKey(resource) {
     return resource.toString();
 }
@@ -166,6 +167,11 @@ export class SingleModelEditStackElement {
             this._data = this._data.serialize();
         }
     }
+    open() {
+        if (!(this._data instanceof SingleModelEditStackData)) {
+            this._data = SingleModelEditStackData.deserialize(this._data);
+        }
+    }
     undo() {
         if (URI.isUri(this.model)) {
             // don't have a model
@@ -239,6 +245,9 @@ export class MultiModelEditStackElement {
     close() {
         this._isOpen = false;
     }
+    open() {
+        // cannot reopen
+    }
     undo() {
         this._isOpen = false;
         for (const editStackElement of this._editStackElementsArr) {
@@ -252,6 +261,13 @@ export class MultiModelEditStackElement {
     }
     split() {
         return this._editStackElementsArr;
+    }
+    toString() {
+        let result = [];
+        for (const editStackElement of this._editStackElementsArr) {
+            result.push(`${basename(editStackElement.resource)}: ${editStackElement}`);
+        }
+        return `{${result.join(', ')}}`;
     }
 }
 function getModelEOL(model) {
@@ -278,6 +294,12 @@ export class EditStack {
         const lastElement = this._undoRedoService.getLastElement(this._model.uri);
         if (isEditStackElement(lastElement)) {
             lastElement.close();
+        }
+    }
+    popStackElement() {
+        const lastElement = this._undoRedoService.getLastElement(this._model.uri);
+        if (isEditStackElement(lastElement)) {
+            lastElement.open();
         }
     }
     clear() {

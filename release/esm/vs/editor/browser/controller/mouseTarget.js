@@ -10,6 +10,7 @@ import { Position } from '../../common/core/position.js';
 import { Range as EditorRange } from '../../common/core/range.js';
 import { CursorColumns } from '../../common/controller/cursorCommon.js';
 import * as dom from '../../../base/browser/dom.js';
+import { AtomicTabMoveOperations } from '../../common/controller/cursorAtomicMoveOperations.js';
 export class PointerHandlerLastRenderData {
     constructor(lastViewCursorsRenderData, lastTextareaPosition) {
         this.lastViewCursorsRenderData = lastViewCursorsRenderData;
@@ -119,10 +120,11 @@ export class HitTestContext {
     constructor(context, viewHelper, lastRenderData) {
         this.model = context.model;
         const options = context.configuration.options;
-        this.layoutInfo = options.get(117 /* layoutInfo */);
+        this.layoutInfo = options.get(123 /* layoutInfo */);
         this.viewDomNode = viewHelper.viewDomNode;
-        this.lineHeight = options.get(51 /* lineHeight */);
-        this.typicalHalfwidthCharacterWidth = options.get(36 /* fontInfo */).typicalHalfwidthCharacterWidth;
+        this.lineHeight = options.get(53 /* lineHeight */);
+        this.stickyTabStops = options.get(99 /* stickyTabStops */);
+        this.typicalHalfwidthCharacterWidth = options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth;
         this.lastRenderData = lastRenderData;
         this._context = context;
         this._viewHelper = viewHelper;
@@ -187,6 +189,12 @@ export class HitTestContext {
     }
     isAfterLines(mouseVerticalOffset) {
         return this._context.viewLayout.isAfterLines(mouseVerticalOffset);
+    }
+    isInTopPadding(mouseVerticalOffset) {
+        return this._context.viewLayout.isInTopPadding(mouseVerticalOffset);
+    }
+    isInBottomPadding(mouseVerticalOffset) {
+        return this._context.viewLayout.isInBottomPadding(mouseVerticalOffset);
     }
     getVerticalOffsetForLineNumber(lineNumber) {
         return this._context.viewLayout.getVerticalOffsetForLineNumber(lineNumber);
@@ -440,8 +448,11 @@ export class MouseTargetFactory {
         if (!ElementPath.isChildOfViewLines(request.targetPath)) {
             return null;
         }
+        if (ctx.isInTopPadding(request.mouseVerticalOffset)) {
+            return request.fulfill(7 /* CONTENT_EMPTY */, new Position(1, 1), undefined, EMPTY_CONTENT_AFTER_LINES);
+        }
         // Check if it is below any lines and any view zones
-        if (ctx.isAfterLines(request.mouseVerticalOffset)) {
+        if (ctx.isAfterLines(request.mouseVerticalOffset) || ctx.isInBottomPadding(request.mouseVerticalOffset)) {
             // This most likely indicates it happened after the last view-line
             const lineCount = ctx.model.getLineCount();
             const maxLineColumn = ctx.model.getLineMaxColumn(lineCount);
@@ -449,7 +460,7 @@ export class MouseTargetFactory {
         }
         if (domHitTestExecuted) {
             // Check if we are hitting a view-line (can happen in the case of inline decorations on empty lines)
-            // See https://github.com/Microsoft/vscode/issues/46942
+            // See https://github.com/microsoft/vscode/issues/46942
             if (ElementPath.isStrictChildOfViewLines(request.targetPath)) {
                 const lineNumber = ctx.getLineNumberAtVerticalOffset(request.mouseVerticalOffset);
                 if (ctx.model.getLineLength(lineNumber) === 0) {
@@ -506,9 +517,9 @@ export class MouseTargetFactory {
     }
     getMouseColumn(editorPos, pos) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(117 /* layoutInfo */);
+        const layoutInfo = options.get(123 /* layoutInfo */);
         const mouseContentHorizontalOffset = this._context.viewLayout.getCurrentScrollLeft() + pos.x - editorPos.x - layoutInfo.contentLeft;
-        return MouseTargetFactory._getMouseColumn(mouseContentHorizontalOffset, options.get(36 /* fontInfo */).typicalHalfwidthCharacterWidth);
+        return MouseTargetFactory._getMouseColumn(mouseContentHorizontalOffset, options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth);
     }
     static _getMouseColumn(mouseContentHorizontalOffset, typicalHalfwidthCharacterWidth) {
         if (mouseContentHorizontalOffset < 0) {
@@ -522,7 +533,7 @@ export class MouseTargetFactory {
         const lineWidth = ctx.getLineWidth(lineNumber);
         if (request.mouseContentHorizontalOffset > lineWidth) {
             if (browser.isEdge && pos.column === 1) {
-                // See https://github.com/Microsoft/vscode/issues/10875
+                // See https://github.com/microsoft/vscode/issues/10875
                 const detail = createEmptyContentDataInLines(request.mouseContentHorizontalOffset - lineWidth);
                 return request.fulfill(7 /* CONTENT_EMPTY */, new Position(lineNumber, ctx.model.getLineMaxColumn(lineNumber)), undefined, detail);
             }
@@ -736,6 +747,16 @@ export class MouseTargetFactory {
             hitTarget: resultHitTarget
         };
     }
+    static _snapToSoftTabBoundary(position, viewModel) {
+        const minColumn = viewModel.getLineMinColumn(position.lineNumber);
+        const lineContent = viewModel.getLineContent(position.lineNumber);
+        const { tabSize } = viewModel.getTextModelOptions();
+        const newPosition = AtomicTabMoveOperations.atomicPosition(lineContent, position.column - minColumn, tabSize, 2 /* Nearest */);
+        if (newPosition !== -1) {
+            return new Position(position.lineNumber, newPosition + minColumn);
+        }
+        return position;
+    }
     static _doHitTest(ctx, request) {
         // State of the art (18.10.2012):
         // The spec says browsers should support document.caretPositionFromPoint, but nobody implemented it (http://dev.w3.org/csswg/cssom-view/)
@@ -751,19 +772,27 @@ export class MouseTargetFactory {
         //    - it inconsistently hits text nodes or span nodes, while WebKit only hits text nodes
         //    - when toggling render whitespace on, and hit testing in the empty content after a line, it always hits offset 0 of the first span of the line
         // Thank you browsers for making this so 'easy' :)
+        let result;
         if (typeof document.caretRangeFromPoint === 'function') {
-            return this._doHitTestWithCaretRangeFromPoint(ctx, request);
+            result = this._doHitTestWithCaretRangeFromPoint(ctx, request);
         }
         else if (document.caretPositionFromPoint) {
-            return this._doHitTestWithCaretPositionFromPoint(ctx, request.pos.toClientCoordinates());
+            result = this._doHitTestWithCaretPositionFromPoint(ctx, request.pos.toClientCoordinates());
         }
         else if (document.body.createTextRange) {
-            return this._doHitTestWithMoveToPoint(ctx, request.pos.toClientCoordinates());
+            result = this._doHitTestWithMoveToPoint(ctx, request.pos.toClientCoordinates());
         }
-        return {
-            position: null,
-            hitTarget: null
-        };
+        else {
+            result = {
+                position: null,
+                hitTarget: null
+            };
+        }
+        // Snap to the nearest soft tab boundary if atomic soft tabs are enabled.
+        if (result.position && ctx.stickyTabStops) {
+            result.position = this._snapToSoftTabBoundary(result.position, ctx.model);
+        }
+        return result;
     }
 }
 export function shadowCaretRangeFromPoint(shadowRoot, x, y) {
@@ -774,7 +803,7 @@ export function shadowCaretRangeFromPoint(shadowRoot, x, y) {
         // Get the last child of the element until its firstChild is a text node
         // This assumes that the pointer is on the right of the line, out of the tokens
         // and that we want to get the offset of the last token of the line
-        while (el && el.firstChild && el.firstChild.nodeType !== el.firstChild.TEXT_NODE) {
+        while (el && el.firstChild && el.firstChild.nodeType !== el.firstChild.TEXT_NODE && el.lastChild && el.lastChild.firstChild) {
             el = el.lastChild;
         }
         // Grab its rect

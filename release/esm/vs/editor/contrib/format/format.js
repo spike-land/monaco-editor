@@ -99,7 +99,7 @@ export class FormattingConflicts {
             if (selector) {
                 return yield selector(formatter, document, mode);
             }
-            return formatter[0];
+            return undefined;
         });
     }
 }

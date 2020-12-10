@@ -208,7 +208,8 @@ export class StandaloneKeybindingService extends AbstractKeybindingService {
                 when: when,
                 weight1: 1000,
                 weight2: 0,
-                extensionId: null
+                extensionId: null,
+                isBuiltinExtension: false
             });
             toDispose.add(toDisposable(() => {
                 for (let i = 0; i < this._dynamicKeybindings.length; i++) {
@@ -247,12 +248,12 @@ export class StandaloneKeybindingService extends AbstractKeybindingService {
             const keybinding = item.keybinding;
             if (!keybinding) {
                 // This might be a removal keybinding item in user settings => accept it
-                result[resultLen++] = new ResolvedKeybindingItem(undefined, item.command, item.commandArgs, when, isDefault, null);
+                result[resultLen++] = new ResolvedKeybindingItem(undefined, item.command, item.commandArgs, when, isDefault, null, false);
             }
             else {
                 const resolvedKeybindings = this.resolveKeybinding(keybinding);
                 for (const resolvedKeybinding of resolvedKeybindings) {
-                    result[resultLen++] = new ResolvedKeybindingItem(resolvedKeybinding, item.command, item.commandArgs, when, isDefault, null);
+                    result[resultLen++] = new ResolvedKeybindingItem(resolvedKeybinding, item.command, item.commandArgs, when, isDefault, null, false);
                 }
             }
         }

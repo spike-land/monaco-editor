@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as arrays from './arrays.js';
 import * as strings from './strings.js';
 import * as extpath from './extpath.js';
 import * as paths from './path.js';
@@ -281,7 +280,7 @@ function trivia3(pattern, options) {
         }
         return null;
     };
-    const withBasenames = arrays.first(parsedPatterns, pattern => !!pattern.allBasenames);
+    const withBasenames = parsedPatterns.find(pattern => !!pattern.allBasenames);
     if (withBasenames) {
         parsedPattern.allBasenames = withBasenames.allBasenames;
     }
@@ -371,7 +370,7 @@ function parsedExpression(expression, options) {
             }
             return null;
         };
-        const withBasenames = arrays.first(parsedPatterns, pattern => !!pattern.allBasenames);
+        const withBasenames = parsedPatterns.find(pattern => !!pattern.allBasenames);
         if (withBasenames) {
             resultExpression.allBasenames = withBasenames.allBasenames;
         }
@@ -401,7 +400,7 @@ function parsedExpression(expression, options) {
         }
         return null;
     };
-    const withBasenames = arrays.first(parsedPatterns, pattern => !!pattern.allBasenames);
+    const withBasenames = parsedPatterns.find(pattern => !!pattern.allBasenames);
     if (withBasenames) {
         resultExpression.allBasenames = withBasenames.allBasenames;
     }

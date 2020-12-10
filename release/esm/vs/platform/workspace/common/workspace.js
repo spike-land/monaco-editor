@@ -27,10 +27,11 @@ export var IWorkspaceFolder;
     IWorkspaceFolder.isIWorkspaceFolder = isIWorkspaceFolder;
 })(IWorkspaceFolder || (IWorkspaceFolder = {}));
 export class Workspace {
-    constructor(_id, folders = [], _configuration = null) {
+    constructor(_id, folders, _configuration, _ignorePathCasing) {
         this._id = _id;
         this._configuration = _configuration;
-        this._foldersMap = TernarySearchTree.forUris();
+        this._ignorePathCasing = _ignorePathCasing;
+        this._foldersMap = TernarySearchTree.forUris(this._ignorePathCasing);
         this.folders = folders;
     }
     get folders() {
@@ -60,7 +61,7 @@ export class Workspace {
         })) || null;
     }
     updateFoldersMap() {
-        this._foldersMap = TernarySearchTree.forUris();
+        this._foldersMap = TernarySearchTree.forUris(this._ignorePathCasing);
         for (const folder of this.folders) {
             this._foldersMap.set(folder.uri, folder);
         }

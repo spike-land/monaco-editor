@@ -419,7 +419,7 @@ export class MonarchTokenizer {
         let stack = lineState.stack;
         let pos = 0;
         let groupMatching = null;
-        // See https://github.com/Microsoft/monaco-editor/issues/1235:
+        // See https://github.com/microsoft/monaco-editor/issues/1235:
         // Evaluate rules at least once for an empty line
         let forceEvaluation = true;
         while (forceEvaluation || pos < lineLength) {

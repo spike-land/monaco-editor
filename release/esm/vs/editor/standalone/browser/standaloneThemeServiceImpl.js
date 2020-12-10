@@ -12,7 +12,8 @@ import { Registry } from '../../../platform/registry/common/platform.js';
 import { Extensions } from '../../../platform/theme/common/colorRegistry.js';
 import { Extensions as ThemingExtensions } from '../../../platform/theme/common/themeService.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
-import { CodiconStyles } from '../../../base/browser/ui/codicons/codiconStyles.js';
+import { ColorScheme } from '../../../platform/theme/common/theme.js';
+import { getIconRegistry } from '../../../platform/theme/common/iconRegistry.js';
 const VS_THEME_NAME = 'vs';
 const VS_DARK_THEME_NAME = 'vs-dark';
 const HC_BLACK_THEME_NAME = 'hc-black';
@@ -86,9 +87,9 @@ class StandaloneTheme {
     }
     get type() {
         switch (this.base) {
-            case VS_THEME_NAME: return 'light';
-            case HC_BLACK_THEME_NAME: return 'hc';
-            default: return 'dark';
+            case VS_THEME_NAME: return ColorScheme.LIGHT;
+            case HC_BLACK_THEME_NAME: return ColorScheme.HIGH_CONTRAST;
+            default: return ColorScheme.DARK;
         }
     }
     get tokenTheme() {
@@ -153,14 +154,15 @@ export class StandaloneThemeServiceImpl extends Disposable {
         this._knownThemes.set(VS_THEME_NAME, newBuiltInTheme(VS_THEME_NAME));
         this._knownThemes.set(VS_DARK_THEME_NAME, newBuiltInTheme(VS_DARK_THEME_NAME));
         this._knownThemes.set(HC_BLACK_THEME_NAME, newBuiltInTheme(HC_BLACK_THEME_NAME));
-        this._codiconCSS = CodiconStyles.getCSS();
+        const iconRegistry = getIconRegistry();
+        this._codiconCSS = iconRegistry.getCSS();
         this._themeCSS = '';
         this._allCSS = `${this._codiconCSS}\n${this._themeCSS}`;
         this._globalStyleElement = null;
         this._styleElements = [];
         this.setTheme(VS_THEME_NAME);
-        CodiconStyles.onDidChange(() => {
-            this._codiconCSS = CodiconStyles.getCSS();
+        iconRegistry.onDidChange(() => {
+            this._codiconCSS = iconRegistry.getCSS();
             this._updateCSS();
         });
     }
@@ -174,7 +176,7 @@ export class StandaloneThemeServiceImpl extends Disposable {
         if (!this._globalStyleElement) {
             this._globalStyleElement = dom.createStyleSheet();
             this._globalStyleElement.className = 'monaco-colors';
-            this._globalStyleElement.innerHTML = this._allCSS;
+            this._globalStyleElement.textContent = this._allCSS;
             this._styleElements.push(this._globalStyleElement);
         }
         return Disposable.None;
@@ -182,7 +184,7 @@ export class StandaloneThemeServiceImpl extends Disposable {
     _registerShadowDomContainer(domNode) {
         const styleElement = dom.createStyleSheet(domNode);
         styleElement.className = 'monaco-colors';
-        styleElement.innerHTML = this._allCSS;
+        styleElement.textContent = this._allCSS;
         this._styleElements.push(styleElement);
         return {
             dispose: () => {
@@ -253,7 +255,7 @@ export class StandaloneThemeServiceImpl extends Disposable {
     }
     _updateCSS() {
         this._allCSS = `${this._codiconCSS}\n${this._themeCSS}`;
-        this._styleElements.forEach(styleElement => styleElement.innerHTML = this._allCSS);
+        this._styleElements.forEach(styleElement => styleElement.textContent = this._allCSS);
     }
     getFileIconTheme() {
         return {

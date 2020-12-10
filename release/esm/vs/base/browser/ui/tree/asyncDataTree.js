@@ -20,7 +20,6 @@ import { timeout, createCancelablePromise } from '../../../common/async.js';
 import { Iterable } from '../../../common/iterator.js';
 import { ElementsDragAndDropData } from '../list/listView.js';
 import { isPromiseCanceledError, onUnexpectedError } from '../../../common/errors.js';
-import { removeClasses, addClasses } from '../../dom.js';
 import { isFilterResult, getVisibleState } from './indexTreeModel.js';
 import { treeItemLoadingIcon } from './treeIcons.js';
 function createAsyncDataTreeNode(props) {
@@ -71,12 +70,13 @@ class AsyncDataTreeRenderer {
     }
     renderTwistie(element, twistieElement) {
         if (element.slow) {
-            addClasses(twistieElement, treeItemLoadingIcon.classNames);
+            twistieElement.classList.add(...treeItemLoadingIcon.classNamesArray);
+            return true;
         }
         else {
-            removeClasses(twistieElement, treeItemLoadingIcon.classNames);
+            twistieElement.classList.remove(...treeItemLoadingIcon.classNamesArray);
+            return false;
         }
-        return false;
     }
     disposeElement(node, index, templateData, height) {
         if (this.renderer.disposeElement) {
@@ -619,12 +619,13 @@ class CompressibleAsyncDataTreeRenderer {
     }
     renderTwistie(element, twistieElement) {
         if (element.slow) {
-            addClasses(twistieElement, treeItemLoadingIcon.classNames);
+            twistieElement.classList.add(...treeItemLoadingIcon.classNamesArray);
+            return true;
         }
         else {
-            removeClasses(twistieElement, treeItemLoadingIcon.classNames);
+            twistieElement.classList.remove(...treeItemLoadingIcon.classNamesArray);
+            return false;
         }
-        return false;
     }
     disposeElement(node, index, templateData, height) {
         if (this.renderer.disposeElement) {

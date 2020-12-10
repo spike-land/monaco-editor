@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as dom from '../../../base/browser/dom.js';
 import { Widget } from '../../../base/browser/ui/widget.js';
 import { renderHoverAction, HoverWidget } from '../../../base/browser/ui/hover/hoverWidget.js';
 export class ContentHoverWidget extends Widget {
@@ -23,7 +22,7 @@ export class ContentHoverWidget extends Widget {
             }
         });
         this._register(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(36 /* fontInfo */)) {
+            if (e.hasChanged(38 /* fontInfo */)) {
                 this.updateFont();
             }
         }));
@@ -39,7 +38,7 @@ export class ContentHoverWidget extends Widget {
     }
     set isVisible(value) {
         this._isVisible = value;
-        dom.toggleClass(this._hover.containerDomNode, 'hidden', !this._isVisible);
+        this._hover.containerDomNode.classList.toggle('hidden', !this._isVisible);
     }
     getId() {
         return this._id;
@@ -113,7 +112,7 @@ export class ContentHoverWidget extends Widget {
     }
     layout() {
         const height = Math.max(this._editor.getLayoutInfo().height / 4, 250);
-        const { fontSize, lineHeight } = this._editor.getOption(36 /* fontInfo */);
+        const { fontSize, lineHeight } = this._editor.getOption(38 /* fontInfo */);
         this._hover.contentsDomNode.style.fontSize = `${fontSize}px`;
         this._hover.contentsDomNode.style.lineHeight = `${lineHeight}px`;
         this._hover.contentsDomNode.style.maxHeight = `${height}px`;
@@ -132,7 +131,7 @@ export class GlyphHoverWidget extends Widget {
         this._domNode.setAttribute('role', 'tooltip');
         this._showAtLineNumber = -1;
         this._register(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(36 /* fontInfo */)) {
+            if (e.hasChanged(38 /* fontInfo */)) {
                 this.updateFont();
             }
         }));
@@ -143,7 +142,7 @@ export class GlyphHoverWidget extends Widget {
     }
     set isVisible(value) {
         this._isVisible = value;
-        dom.toggleClass(this._domNode, 'hidden', !this._isVisible);
+        this._domNode.classList.toggle('hidden', !this._isVisible);
     }
     getId() {
         return this._id;
@@ -159,7 +158,7 @@ export class GlyphHoverWidget extends Widget {
         const editorLayout = this._editor.getLayoutInfo();
         const topForLineNumber = this._editor.getTopForLineNumber(this._showAtLineNumber);
         const editorScrollTop = this._editor.getScrollTop();
-        const lineHeight = this._editor.getOption(51 /* lineHeight */);
+        const lineHeight = this._editor.getOption(53 /* lineHeight */);
         const nodeHeight = this._domNode.clientHeight;
         const top = topForLineNumber - editorScrollTop - ((nodeHeight - lineHeight) / 2);
         this._domNode.style.left = `${editorLayout.glyphMarginLeft + editorLayout.glyphMarginWidth}px`;

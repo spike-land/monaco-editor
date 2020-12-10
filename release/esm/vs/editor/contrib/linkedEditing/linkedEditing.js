@@ -20,7 +20,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import './media/onTypeRename.css';
 import * as nls from '../../../nls.js';
 import { registerEditorContribution, registerModelAndPositionCommand, EditorAction, EditorCommand, registerEditorAction, registerEditorCommand } from '../../browser/editorExtensions.js';
 import * as arrays from '../../../base/common/arrays.js';
@@ -28,7 +27,7 @@ import { Disposable, DisposableStore } from '../../../base/common/lifecycle.js';
 import { Position } from '../../common/core/position.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
 import { Range } from '../../common/core/range.js';
-import { OnTypeRenameProviderRegistry } from '../../common/modes.js';
+import { LinkedEditingRangeProviderRegistry } from '../../common/modes.js';
 import { first, createCancelablePromise, Delayer } from '../../../base/common/async.js';
 import { ModelDecorationOptions } from '../../common/model/textModel.js';
 import { ContextKeyExpr, RawContextKey, IContextKeyService } from '../../../platform/contextkey/common/contextkey.js';
@@ -41,8 +40,9 @@ import { registerColor } from '../../../platform/theme/common/colorRegistry.js';
 import { registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
 import { Color } from '../../../base/common/color.js';
 import { LanguageConfigurationRegistry } from '../../common/modes/languageConfigurationRegistry.js';
-export const CONTEXT_ONTYPE_RENAME_INPUT_VISIBLE = new RawContextKey('onTypeRenameInputVisible', false);
-let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable {
+export const CONTEXT_ONTYPE_RENAME_INPUT_VISIBLE = new RawContextKey('LinkedEditingInputVisible', false);
+const DECORATION_CLASS_NAME = 'linked-editing-decoration';
+let LinkedEditingContribution = class LinkedEditingContribution extends Disposable {
     constructor(editor, contextKeyService) {
         super();
         this._debounceDuration = 200;
@@ -62,20 +62,20 @@ let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable
         this._currentRequestModelVersion = null;
         this._register(this._editor.onDidChangeModel(() => this.reinitialize()));
         this._register(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(73 /* renameOnType */)) {
+            if (e.hasChanged(56 /* linkedEditing */) || e.hasChanged(76 /* renameOnType */)) {
                 this.reinitialize();
             }
         }));
-        this._register(OnTypeRenameProviderRegistry.onDidChange(() => this.reinitialize()));
+        this._register(LinkedEditingRangeProviderRegistry.onDidChange(() => this.reinitialize()));
         this._register(this._editor.onDidChangeModelLanguage(() => this.reinitialize()));
         this.reinitialize();
     }
     static get(editor) {
-        return editor.getContribution(OnTypeRenameContribution.ID);
+        return editor.getContribution(LinkedEditingContribution.ID);
     }
     reinitialize() {
         const model = this._editor.getModel();
-        const isEnabled = model !== null && this._editor.getOption(73 /* renameOnType */) && OnTypeRenameProviderRegistry.has(model);
+        const isEnabled = model !== null && (this._editor.getOption(56 /* linkedEditing */) || this._editor.getOption(76 /* renameOnType */)) && LinkedEditingRangeProviderRegistry.has(model);
         if (isEnabled === this._enabled) {
             return;
         }
@@ -176,9 +176,10 @@ let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable
             return;
         }
         try {
+            this._editor.popUndoStop();
             this._ignoreChangeEvent = true;
             const prevEditOperationType = this._editor._getViewModel().getPrevEditOperationType();
-            this._editor.executeEdits('onTypeRename', edits);
+            this._editor.executeEdits('linkedEditing', edits);
             this._editor._getViewModel().setPrevEditOperationType(prevEditOperationType);
         }
         finally {
@@ -227,7 +228,7 @@ let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable
             this._currentRequestModelVersion = modelVersionId;
             const request = createCancelablePromise((token) => __awaiter(this, void 0, void 0, function* () {
                 try {
-                    const response = yield getOnTypeRenameRanges(model, position, token);
+                    const response = yield getLinkedEditingRanges(model, position, token);
                     if (request !== this._currentRequest) {
                         return;
                     }
@@ -253,11 +254,11 @@ let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable
                         }
                     }
                     if (!foundReferenceRange) {
-                        // Cannot do on type rename if the ranges are not where the cursor is...
+                        // Cannot do linked editing if the ranges are not where the cursor is...
                         this.clearRanges();
                         return;
                     }
-                    const decorations = ranges.map(range => ({ range: range, options: OnTypeRenameContribution.DECORATION }));
+                    const decorations = ranges.map(range => ({ range: range, options: LinkedEditingContribution.DECORATION }));
                     this._visibleContextKey.set(true);
                     this._currentDecorations = this._editor.deltaDecorations(this._currentDecorations, decorations);
                 }
@@ -276,21 +277,21 @@ let OnTypeRenameContribution = class OnTypeRenameContribution extends Disposable
         });
     }
 };
-OnTypeRenameContribution.ID = 'editor.contrib.onTypeRename';
-OnTypeRenameContribution.DECORATION = ModelDecorationOptions.register({
+LinkedEditingContribution.ID = 'editor.contrib.linkedEditing';
+LinkedEditingContribution.DECORATION = ModelDecorationOptions.register({
     stickiness: 0 /* AlwaysGrowsWhenTypingAtEdges */,
-    className: 'on-type-rename-decoration'
+    className: DECORATION_CLASS_NAME
 });
-OnTypeRenameContribution = __decorate([
+LinkedEditingContribution = __decorate([
     __param(1, IContextKeyService)
-], OnTypeRenameContribution);
-export { OnTypeRenameContribution };
-export class OnTypeRenameAction extends EditorAction {
+], LinkedEditingContribution);
+export { LinkedEditingContribution };
+export class LinkedEditingAction extends EditorAction {
     constructor() {
         super({
-            id: 'editor.action.onTypeRename',
-            label: nls.localize('onTypeRename.label', "On Type Rename Symbol"),
-            alias: 'On Type Rename Symbol',
+            id: 'editor.action.linkedEditing',
+            label: nls.localize('linkedEditing.label', "Start Linked Editing"),
+            alias: 'Start Linked Editing',
             precondition: ContextKeyExpr.and(EditorContextKeys.writable, EditorContextKeys.hasRenameProvider),
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -317,16 +318,16 @@ export class OnTypeRenameAction extends EditorAction {
         return super.runCommand(accessor, args);
     }
     run(_accessor, editor) {
-        const controller = OnTypeRenameContribution.get(editor);
+        const controller = LinkedEditingContribution.get(editor);
         if (controller) {
             return Promise.resolve(controller.updateRanges(true));
         }
         return Promise.resolve();
     }
 }
-const OnTypeRenameCommand = EditorCommand.bindToContribution(OnTypeRenameContribution.get);
-registerEditorCommand(new OnTypeRenameCommand({
-    id: 'cancelOnTypeRenameInput',
+const LinkedEditingCommand = EditorCommand.bindToContribution(LinkedEditingContribution.get);
+registerEditorCommand(new LinkedEditingCommand({
+    id: 'cancelLinkedEditingInput',
     precondition: CONTEXT_ONTYPE_RENAME_INPUT_VISIBLE,
     handler: x => x.clearRanges(),
     kbOpts: {
@@ -336,33 +337,28 @@ registerEditorCommand(new OnTypeRenameCommand({
         secondary: [1024 /* Shift */ | 9 /* Escape */]
     }
 }));
-export function getOnTypeRenameRanges(model, position, token) {
-    const orderedByScore = OnTypeRenameProviderRegistry.ordered(model);
-    // in order of score ask the occurrences provider
+function getLinkedEditingRanges(model, position, token) {
+    const orderedByScore = LinkedEditingRangeProviderRegistry.ordered(model);
+    // in order of score ask the linked editing range provider
     // until someone response with a good result
-    // (good = none empty array)
-    return first(orderedByScore.map(provider => () => {
-        return Promise.resolve(provider.provideOnTypeRenameRanges(model, position, token)).then((res) => {
-            if (!res) {
-                return undefined;
-            }
-            return {
-                ranges: res.ranges,
-                wordPattern: res.wordPattern || provider.wordPattern
-            };
-        }, (err) => {
-            onUnexpectedExternalError(err);
+    // (good = not null)
+    return first(orderedByScore.map(provider => () => __awaiter(this, void 0, void 0, function* () {
+        try {
+            return yield provider.provideLinkedEditingRanges(model, position, token);
+        }
+        catch (e) {
+            onUnexpectedExternalError(e);
             return undefined;
-        });
-    }), result => !!result && arrays.isNonEmptyArray(result === null || result === void 0 ? void 0 : result.ranges));
+        }
+    })), result => !!result && arrays.isNonEmptyArray(result === null || result === void 0 ? void 0 : result.ranges));
 }
-export const editorOnTypeRenameBackground = registerColor('editor.onTypeRenameBackground', { dark: Color.fromHex('#f00').transparent(0.3), light: Color.fromHex('#f00').transparent(0.3), hc: Color.fromHex('#f00').transparent(0.3) }, nls.localize('editorOnTypeRenameBackground', 'Background color when the editor auto renames on type.'));
+export const editorLinkedEditingBackground = registerColor('editor.linkedEditingBackground', { dark: Color.fromHex('#f00').transparent(0.3), light: Color.fromHex('#f00').transparent(0.3), hc: Color.fromHex('#f00').transparent(0.3) }, nls.localize('editorLinkedEditingBackground', 'Background color when the editor auto renames on type.'));
 registerThemingParticipant((theme, collector) => {
-    const editorOnTypeRenameBackgroundColor = theme.getColor(editorOnTypeRenameBackground);
-    if (editorOnTypeRenameBackgroundColor) {
-        collector.addRule(`.monaco-editor .on-type-rename-decoration { background: ${editorOnTypeRenameBackgroundColor}; border-left-color: ${editorOnTypeRenameBackgroundColor}; }`);
+    const editorLinkedEditingBackgroundColor = theme.getColor(editorLinkedEditingBackground);
+    if (editorLinkedEditingBackgroundColor) {
+        collector.addRule(`.monaco-editor .${DECORATION_CLASS_NAME} { background: ${editorLinkedEditingBackgroundColor}; border-left-color: ${editorLinkedEditingBackgroundColor}; }`);
     }
 });
-registerModelAndPositionCommand('_executeRenameOnTypeProvider', (model, position) => getOnTypeRenameRanges(model, position, CancellationToken.None));
-registerEditorContribution(OnTypeRenameContribution.ID, OnTypeRenameContribution);
-registerEditorAction(OnTypeRenameAction);
+registerModelAndPositionCommand('_executeLinkedEditingProvider', (model, position) => getLinkedEditingRanges(model, position, CancellationToken.None));
+registerEditorContribution(LinkedEditingContribution.ID, LinkedEditingContribution);
+registerEditorAction(LinkedEditingAction);

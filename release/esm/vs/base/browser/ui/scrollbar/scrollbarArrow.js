@@ -5,7 +5,6 @@
 import { GlobalMouseMoveMonitor, standardMouseMoveMerger } from '../../globalMouseMoveMonitor.js';
 import { Widget } from '../widget.js';
 import { IntervalTimer, TimeoutTimer } from '../../../common/async.js';
-import { addClasses } from '../../dom.js';
 /**
  * The arrow image size.
  */
@@ -33,7 +32,7 @@ export class ScrollbarArrow extends Widget {
         }
         this.domNode = document.createElement('div');
         this.domNode.className = opts.className;
-        addClasses(this.domNode, opts.icon.classNames);
+        this.domNode.classList.add(...opts.icon.classNamesArray);
         this.domNode.style.position = 'absolute';
         this.domNode.style.width = ARROW_IMG_SIZE + 'px';
         this.domNode.style.height = ARROW_IMG_SIZE + 'px';

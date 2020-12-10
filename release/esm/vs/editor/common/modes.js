@@ -327,7 +327,7 @@ export const DocumentHighlightProviderRegistry = new LanguageFeatureRegistry();
 /**
  * @internal
  */
-export const OnTypeRenameProviderRegistry = new LanguageFeatureRegistry();
+export const LinkedEditingRangeProviderRegistry = new LanguageFeatureRegistry();
 /**
  * @internal
  */

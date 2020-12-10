@@ -13,10 +13,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { first } from '../../../base/common/async.js';
 import { onUnexpectedExternalError } from '../../../base/common/errors.js';
-import { registerDefaultLanguageCommand } from '../../browser/editorExtensions.js';
+import { Position } from '../../common/core/position.js';
 import * as modes from '../../common/modes.js';
 import { RawContextKey } from '../../../platform/contextkey/common/contextkey.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
+import { CommandsRegistry } from '../../../platform/commands/common/commands.js';
+import { URI } from '../../../base/common/uri.js';
+import { assertType } from '../../../base/common/types.js';
+import { ITextModelService } from '../../common/services/resolverService.js';
 export const Context = {
     Visible: new RawContextKey('parameterHintsVisible', false),
     MultipleSignatures: new RawContextKey('parameterHintsMultipleSignatures', false),
@@ -28,15 +32,25 @@ export function provideSignatureHelp(model, position, context, token) {
             .catch(e => onUnexpectedExternalError(e));
     }));
 }
-registerDefaultLanguageCommand('_executeSignatureHelpProvider', (model, position, args) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield provideSignatureHelp(model, position, {
-        triggerKind: modes.SignatureHelpTriggerKind.Invoke,
-        isRetrigger: false,
-        triggerCharacter: args['triggerCharacter']
-    }, CancellationToken.None);
-    if (!result) {
-        return undefined;
+CommandsRegistry.registerCommand('_executeSignatureHelpProvider', (accessor, ...args) => __awaiter(void 0, void 0, void 0, function* () {
+    const [uri, position, triggerCharacter] = args;
+    assertType(URI.isUri(uri));
+    assertType(Position.isIPosition(position));
+    assertType(typeof triggerCharacter === 'string' || !triggerCharacter);
+    const ref = yield accessor.get(ITextModelService).createModelReference(uri);
+    try {
+        const result = yield provideSignatureHelp(ref.object.textEditorModel, Position.lift(position), {
+            triggerKind: modes.SignatureHelpTriggerKind.Invoke,
+            isRetrigger: false,
+            triggerCharacter,
+        }, CancellationToken.None);
+        if (!result) {
+            return undefined;
+        }
+        setTimeout(() => result.dispose(), 0);
+        return result.value;
     }
-    setTimeout(() => result.dispose(), 0);
-    return result.value;
+    finally {
+        ref.dispose();
+    }
 }));

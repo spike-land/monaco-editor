@@ -72,7 +72,7 @@ export function tokenizeLineToHTML(text, viewLineTokens, colorMap, startOffset, 
 }
 function _tokenizeToString(text, tokenizationSupport) {
     let result = `<div class="monaco-tokenized-source">`;
-    let lines = text.split(/\r\n|\r|\n/);
+    let lines = strings.splitLines(text);
     let currentState = tokenizationSupport.getInitialState();
     for (let i = 0, len = lines.length; i < len; i++) {
         let line = lines[i];

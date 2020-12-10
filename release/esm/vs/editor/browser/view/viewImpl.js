@@ -185,7 +185,7 @@ export class View extends ViewEventHandler {
     }
     _applyLayout() {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(117 /* layoutInfo */);
+        const layoutInfo = options.get(123 /* layoutInfo */);
         this.domNode.setWidth(layoutInfo.width);
         this.domNode.setHeight(layoutInfo.height);
         this._overflowGuardContainer.setWidth(layoutInfo.width);
@@ -195,7 +195,7 @@ export class View extends ViewEventHandler {
     }
     _getEditorClassName() {
         const focused = this._textAreaHandler.isFocused() ? ' focused' : '';
-        return this._context.configuration.options.get(114 /* editorClassName */) + ' ' + getThemeTypeSelector(this._context.theme.type) + focused;
+        return this._context.configuration.options.get(120 /* editorClassName */) + ' ' + getThemeTypeSelector(this._context.theme.type) + focused;
     }
     // --- begin event handlers
     handleEvents(events) {

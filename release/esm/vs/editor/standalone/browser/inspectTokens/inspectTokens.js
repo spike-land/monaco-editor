@@ -21,8 +21,9 @@ import { NULL_STATE, nullTokenize, nullTokenize2 } from '../../../common/modes/n
 import { IModeService } from '../../../common/services/modeService.js';
 import { IStandaloneThemeService } from '../../common/standaloneThemeService.js';
 import { editorHoverBackground, editorHoverBorder, editorHoverForeground } from '../../../../platform/theme/common/colorRegistry.js';
-import { HIGH_CONTRAST, registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
+import { registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
 import { InspectTokensNLS } from '../../../common/standaloneStrings.js';
+import { ColorScheme } from '../../../../platform/theme/common/theme.js';
 let InspectTokensController = class InspectTokensController extends Disposable {
     constructor(editor, standaloneColorService, modeService) {
         super();
@@ -237,7 +238,7 @@ registerEditorAction(InspectTokens);
 registerThemingParticipant((theme, collector) => {
     const border = theme.getColor(editorHoverBorder);
     if (border) {
-        let borderWidth = theme.type === HIGH_CONTRAST ? 2 : 1;
+        let borderWidth = theme.type === ColorScheme.HIGH_CONTRAST ? 2 : 1;
         collector.addRule(`.monaco-editor .tokens-inspect-widget { border: ${borderWidth}px solid ${border}; }`);
         collector.addRule(`.monaco-editor .tokens-inspect-widget .tokens-inspect-separator { background-color: ${border}; }`);
     }

@@ -19,6 +19,7 @@ export class AbstractScrollbar extends Widget {
         this._lazyRender = opts.lazyRender;
         this._host = opts.host;
         this._scrollable = opts.scrollable;
+        this._scrollByPage = opts.scrollByPage;
         this._scrollbarState = opts.scrollbarState;
         this._visibilityController = this._register(new ScrollbarVisibilityController(opts.visibility, 'visible scrollbar ' + opts.extraScrollbarClassName, 'invisible scrollbar ' + opts.extraScrollbarClassName));
         this._visibilityController.setIsNeeded(this._scrollbarState.isNeeded());
@@ -152,7 +153,10 @@ export class AbstractScrollbar extends Widget {
             offsetX = e.posx - domNodePosition.left;
             offsetY = e.posy - domNodePosition.top;
         }
-        this._setDesiredScrollPositionNow(this._scrollbarState.getDesiredScrollPositionFromOffset(this._mouseDownRelativePosition(offsetX, offsetY)));
+        const offset = this._mouseDownRelativePosition(offsetX, offsetY);
+        this._setDesiredScrollPositionNow(this._scrollByPage
+            ? this._scrollbarState.getDesiredScrollPositionFromOffsetPaged(offset)
+            : this._scrollbarState.getDesiredScrollPositionFromOffset(offset));
         if (e.leftButton) {
             e.preventDefault();
             this._sliderMouseDown(e, () => { });

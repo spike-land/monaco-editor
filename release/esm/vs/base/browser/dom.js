@@ -9,22 +9,13 @@ import { StandardMouseEvent } from './mouseEvent.js';
 import { TimeoutTimer } from '../common/async.js';
 import { onUnexpectedError } from '../common/errors.js';
 import { Emitter } from '../common/event.js';
-import { Disposable, toDisposable } from '../common/lifecycle.js';
+import { Disposable, DisposableStore, toDisposable } from '../common/lifecycle.js';
 import * as platform from '../common/platform.js';
-import { coalesce } from '../common/arrays.js';
-import { Schemas, RemoteAuthorities } from '../common/network.js';
+import { FileAccess, RemoteAuthorities } from '../common/network.js';
 import { BrowserFeatures } from './canIUse.js';
 export function clearNode(node) {
     while (node.firstChild) {
         node.removeChild(node.firstChild);
-    }
-}
-/**
- * @deprecated use `node.remove()` instead
- */
-export function removeNode(node) {
-    if (node.parentNode) {
-        node.parentNode.removeChild(node);
     }
 }
 export function isInDOM(node) {
@@ -36,44 +27,6 @@ export function isInDOM(node) {
     }
     return false;
 }
-const _classList = new class {
-    hasClass(node, className) {
-        return Boolean(className) && node.classList && node.classList.contains(className);
-    }
-    addClasses(node, ...classNames) {
-        classNames.forEach(nameValue => nameValue.split(' ').forEach(name => this.addClass(node, name)));
-    }
-    addClass(node, className) {
-        if (className && node.classList) {
-            node.classList.add(className);
-        }
-    }
-    removeClass(node, className) {
-        if (className && node.classList) {
-            node.classList.remove(className);
-        }
-    }
-    removeClasses(node, ...classNames) {
-        classNames.forEach(nameValue => nameValue.split(' ').forEach(name => this.removeClass(node, name)));
-    }
-    toggleClass(node, className, shouldHaveIt) {
-        if (node.classList) {
-            node.classList.toggle(className, shouldHaveIt);
-        }
-    }
-};
-/** @deprecated ES6 - use classList*/
-export const hasClass = _classList.hasClass.bind(_classList);
-/** @deprecated ES6 - use classList*/
-export const addClass = _classList.addClass.bind(_classList);
-/** @deprecated ES6 - use classList*/
-export const addClasses = _classList.addClasses.bind(_classList);
-/** @deprecated ES6 - use classList*/
-export const removeClass = _classList.removeClass.bind(_classList);
-/** @deprecated ES6 - use classList*/
-export const removeClasses = _classList.removeClasses.bind(_classList);
-/** @deprecated ES6 - use classList*/
-export const toggleClass = _classList.toggleClass.bind(_classList);
 class DomListener {
     constructor(node, type, handler, options) {
         this._node = node;
@@ -381,6 +334,34 @@ export class Dimension {
         this.width = width;
         this.height = height;
     }
+    with(width = this.width, height = this.height) {
+        if (width !== this.width || height !== this.height) {
+            return new Dimension(width, height);
+        }
+        else {
+            return this;
+        }
+    }
+    static is(obj) {
+        return typeof obj === 'object' && typeof obj.height === 'number' && typeof obj.width === 'number';
+    }
+    static lift(obj) {
+        if (obj instanceof Dimension) {
+            return obj;
+        }
+        else {
+            return new Dimension(obj.width, obj.height);
+        }
+    }
+    static equals(a, b) {
+        if (a === b) {
+            return true;
+        }
+        if (!a || !b) {
+            return false;
+        }
+        return a.width === b.width && a.height === b.height;
+    }
 }
 export function getTopLeftOffset(element) {
     // Adapted from WinJS.Utilities.getPosition
@@ -408,6 +389,14 @@ export function getTopLeftOffset(element) {
         left: left,
         top: top
     };
+}
+export function size(element, width, height) {
+    if (typeof width === 'number') {
+        element.style.width = `${width}px`;
+    }
+    if (typeof height === 'number') {
+        element.style.height = `${height}px`;
+    }
 }
 /**
  * Returns the position of a dom node relative to the entire page.
@@ -477,12 +466,12 @@ export function isAncestor(testChild, testAncestor) {
 }
 export function findParentWithClass(node, clazz, stopAtClazzOrNode) {
     while (node && node.nodeType === node.ELEMENT_NODE) {
-        if (hasClass(node, clazz)) {
+        if (node.classList.contains(clazz)) {
             return node;
         }
         if (stopAtClazzOrNode) {
             if (typeof stopAtClazzOrNode === 'string') {
-                if (hasClass(node, stopAtClazzOrNode)) {
+                if (node.classList.contains(stopAtClazzOrNode)) {
                     return null;
                 }
             }
@@ -537,11 +526,12 @@ function getSharedStyleSheet() {
     return _sharedStyleSheet;
 }
 function getDynamicStyleSheetRules(style) {
-    if (style && style.sheet && style.sheet.rules) {
+    var _a, _b;
+    if ((_a = style === null || style === void 0 ? void 0 : style.sheet) === null || _a === void 0 ? void 0 : _a.rules) {
         // Chrome, IE
         return style.sheet.rules;
     }
-    if (style && style.sheet && style.sheet.cssRules) {
+    if ((_b = style === null || style === void 0 ? void 0 : style.sheet) === null || _b === void 0 ? void 0 : _b.cssRules) {
         // FF
         return style.sheet.cssRules;
     }
@@ -718,19 +708,27 @@ export function append(parent, ...children) {
     children.forEach(child => parent.appendChild(child));
     return children[children.length - 1];
 }
-const SELECTOR_REGEX = /([\w\-]+)?(#([\w\-]+))?((\.([\w\-]+))*)/;
+/**
+ * Removes all children from `parent` and appends `children`
+ */
 export function reset(parent, ...children) {
     parent.innerText = '';
-    coalesce(children)
-        .forEach(child => {
+    appendChildren(parent, ...children);
+}
+/**
+ * Appends `children` to `parent`
+ */
+export function appendChildren(parent, ...children) {
+    for (const child of children) {
         if (child instanceof Node) {
             parent.appendChild(child);
         }
-        else {
+        else if (typeof child === 'string') {
             parent.appendChild(document.createTextNode(child));
         }
-    });
+    }
 }
+const SELECTOR_REGEX = /([\w\-]+)?(#([\w\-]+))?((\.([\w\-]+))*)/;
 export var Namespace;
 (function (Namespace) {
     Namespace["HTML"] = "http://www.w3.org/1999/xhtml";
@@ -773,15 +771,14 @@ function _$(namespace, description, attrs, ...children) {
             result.setAttribute(name, value);
         }
     });
-    coalesce(children)
-        .forEach(child => {
+    for (const child of children) {
         if (child instanceof Node) {
             result.appendChild(child);
         }
-        else {
+        else if (typeof child === 'string') {
             result.appendChild(document.createTextNode(child));
         }
-    });
+    }
     return result;
 }
 export function $(description, attrs, ...children) {
@@ -843,7 +840,7 @@ export function computeScreenAwareSize(cssPx) {
     return Math.max(1, Math.floor(screenPx)) / window.devicePixelRatio;
 }
 /**
- * See https://github.com/Microsoft/monaco-editor/issues/601
+ * See https://github.com/microsoft/monaco-editor/issues/601
  * To protect against malicious code in the linked site, particularly phishing attempts,
  * the window.opener should be set to null to prevent the linked site from having access
  * to change the location of the current page.
@@ -852,7 +849,7 @@ export function computeScreenAwareSize(cssPx) {
 export function windowOpenNoOpener(url) {
     if (platform.isNative || browser.isEdgeWebView) {
         // In VSCode, window.open() always returns null...
-        // The same is true for a WebView (see https://github.com/Microsoft/monaco-editor/issues/628)
+        // The same is true for a WebView (see https://github.com/microsoft/monaco-editor/issues/628)
         window.open(url);
     }
     else {
@@ -872,15 +869,6 @@ export function animate(fn) {
     return toDisposable(() => stepDisposable.dispose());
 }
 RemoteAuthorities.setPreferredWebSchema(/^https:/.test(window.location.href) ? 'https' : 'http');
-export function asDomUri(uri) {
-    if (!uri) {
-        return uri;
-    }
-    if (Schemas.vscodeRemote === uri.scheme) {
-        return RemoteAuthorities.rewrite(uri);
-    }
-    return uri;
-}
 /**
  * returns url('...')
  */
@@ -888,5 +876,116 @@ export function asCSSUrl(uri) {
     if (!uri) {
         return `url('')`;
     }
-    return `url('${asDomUri(uri).toString(true).replace(/'/g, '%27')}')`;
+    return `url('${FileAccess.asBrowserUri(uri).toString(true).replace(/'/g, '%27')}')`;
+}
+export class ModifierKeyEmitter extends Emitter {
+    constructor() {
+        super();
+        this._subscriptions = new DisposableStore();
+        this._keyStatus = {
+            altKey: false,
+            shiftKey: false,
+            ctrlKey: false,
+            metaKey: false
+        };
+        this._subscriptions.add(domEvent(document.body, 'keydown', true)(e => {
+            const event = new StandardKeyboardEvent(e);
+            if (e.altKey && !this._keyStatus.altKey) {
+                this._keyStatus.lastKeyPressed = 'alt';
+            }
+            else if (e.ctrlKey && !this._keyStatus.ctrlKey) {
+                this._keyStatus.lastKeyPressed = 'ctrl';
+            }
+            else if (e.metaKey && !this._keyStatus.metaKey) {
+                this._keyStatus.lastKeyPressed = 'meta';
+            }
+            else if (e.shiftKey && !this._keyStatus.shiftKey) {
+                this._keyStatus.lastKeyPressed = 'shift';
+            }
+            else if (event.keyCode !== 6 /* Alt */) {
+                this._keyStatus.lastKeyPressed = undefined;
+            }
+            else {
+                return;
+            }
+            this._keyStatus.altKey = e.altKey;
+            this._keyStatus.ctrlKey = e.ctrlKey;
+            this._keyStatus.metaKey = e.metaKey;
+            this._keyStatus.shiftKey = e.shiftKey;
+            if (this._keyStatus.lastKeyPressed) {
+                this._keyStatus.event = e;
+                this.fire(this._keyStatus);
+            }
+        }));
+        this._subscriptions.add(domEvent(document.body, 'keyup', true)(e => {
+            if (!e.altKey && this._keyStatus.altKey) {
+                this._keyStatus.lastKeyReleased = 'alt';
+            }
+            else if (!e.ctrlKey && this._keyStatus.ctrlKey) {
+                this._keyStatus.lastKeyReleased = 'ctrl';
+            }
+            else if (!e.metaKey && this._keyStatus.metaKey) {
+                this._keyStatus.lastKeyReleased = 'meta';
+            }
+            else if (!e.shiftKey && this._keyStatus.shiftKey) {
+                this._keyStatus.lastKeyReleased = 'shift';
+            }
+            else {
+                this._keyStatus.lastKeyReleased = undefined;
+            }
+            if (this._keyStatus.lastKeyPressed !== this._keyStatus.lastKeyReleased) {
+                this._keyStatus.lastKeyPressed = undefined;
+            }
+            this._keyStatus.altKey = e.altKey;
+            this._keyStatus.ctrlKey = e.ctrlKey;
+            this._keyStatus.metaKey = e.metaKey;
+            this._keyStatus.shiftKey = e.shiftKey;
+            if (this._keyStatus.lastKeyReleased) {
+                this._keyStatus.event = e;
+                this.fire(this._keyStatus);
+            }
+        }));
+        this._subscriptions.add(domEvent(document.body, 'mousedown', true)(e => {
+            this._keyStatus.lastKeyPressed = undefined;
+        }));
+        this._subscriptions.add(domEvent(document.body, 'mouseup', true)(e => {
+            this._keyStatus.lastKeyPressed = undefined;
+        }));
+        this._subscriptions.add(domEvent(document.body, 'mousemove', true)(e => {
+            if (e.buttons) {
+                this._keyStatus.lastKeyPressed = undefined;
+            }
+        }));
+        this._subscriptions.add(domEvent(window, 'blur')(e => {
+            this.resetKeyStatus();
+        }));
+    }
+    get keyStatus() {
+        return this._keyStatus;
+    }
+    /**
+     * Allows to explicitly reset the key status based on more knowledge (#109062)
+     */
+    resetKeyStatus() {
+        this.doResetKeyStatus();
+        this.fire(this._keyStatus);
+    }
+    doResetKeyStatus() {
+        this._keyStatus = {
+            altKey: false,
+            shiftKey: false,
+            ctrlKey: false,
+            metaKey: false
+        };
+    }
+    static getInstance() {
+        if (!ModifierKeyEmitter.instance) {
+            ModifierKeyEmitter.instance = new ModifierKeyEmitter();
+        }
+        return ModifierKeyEmitter.instance;
+    }
+    dispose() {
+        super.dispose();
+        this._subscriptions.dispose();
+    }
 }

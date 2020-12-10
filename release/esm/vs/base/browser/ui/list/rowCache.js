@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { $, removeClass } from '../../dom.js';
+import { $ } from '../../dom.js';
 function removeFromParent(element) {
     try {
         if (element.parentElement) {
@@ -44,7 +44,7 @@ export class RowCache {
     releaseRow(row) {
         const { domNode, templateId } = row;
         if (domNode) {
-            removeClass(domNode, 'scrolling');
+            domNode.classList.remove('scrolling');
             removeFromParent(domNode);
         }
         const cache = this.getTemplateCache(templateId);

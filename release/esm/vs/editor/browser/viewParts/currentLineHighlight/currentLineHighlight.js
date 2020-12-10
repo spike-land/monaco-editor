@@ -13,10 +13,10 @@ export class AbstractLineHighlightOverlay extends DynamicViewOverlay {
         super();
         this._context = context;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(117 /* layoutInfo */);
-        this._lineHeight = options.get(51 /* lineHeight */);
-        this._renderLineHighlight = options.get(77 /* renderLineHighlight */);
-        this._renderLineHightlightOnlyWhenFocus = options.get(78 /* renderLineHighlightOnlyWhenFocus */);
+        const layoutInfo = options.get(123 /* layoutInfo */);
+        this._lineHeight = options.get(53 /* lineHeight */);
+        this._renderLineHighlight = options.get(80 /* renderLineHighlight */);
+        this._renderLineHighlightOnlyWhenFocus = options.get(81 /* renderLineHighlightOnlyWhenFocus */);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         this._selectionIsEmpty = true;
@@ -53,10 +53,10 @@ export class AbstractLineHighlightOverlay extends DynamicViewOverlay {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(117 /* layoutInfo */);
-        this._lineHeight = options.get(51 /* lineHeight */);
-        this._renderLineHighlight = options.get(77 /* renderLineHighlight */);
-        this._renderLineHightlightOnlyWhenFocus = options.get(78 /* renderLineHighlightOnlyWhenFocus */);
+        const layoutInfo = options.get(123 /* layoutInfo */);
+        this._lineHeight = options.get(53 /* lineHeight */);
+        this._renderLineHighlight = options.get(80 /* renderLineHighlight */);
+        this._renderLineHighlightOnlyWhenFocus = options.get(81 /* renderLineHighlightOnlyWhenFocus */);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         return true;
@@ -81,7 +81,7 @@ export class AbstractLineHighlightOverlay extends DynamicViewOverlay {
         return true;
     }
     onFocusChanged(e) {
-        if (!this._renderLineHightlightOnlyWhenFocus) {
+        if (!this._renderLineHighlightOnlyWhenFocus) {
             return false;
         }
         this._focused = e.isFocused;
@@ -132,26 +132,29 @@ export class CurrentLineHighlightOverlay extends AbstractLineHighlightOverlay {
     _shouldRenderThis() {
         return ((this._renderLineHighlight === 'line' || this._renderLineHighlight === 'all')
             && this._selectionIsEmpty
-            && (!this._renderLineHightlightOnlyWhenFocus || this._focused));
+            && (!this._renderLineHighlightOnlyWhenFocus || this._focused));
     }
     _shouldRenderOther() {
         return ((this._renderLineHighlight === 'gutter' || this._renderLineHighlight === 'all')
-            && (!this._renderLineHightlightOnlyWhenFocus || this._focused));
+            && (!this._renderLineHighlightOnlyWhenFocus || this._focused));
     }
 }
 export class CurrentLineMarginHighlightOverlay extends AbstractLineHighlightOverlay {
     _renderOne(ctx) {
-        const className = 'current-line current-line-margin' + (this._shouldRenderOther() ? ' current-line-margin-both' : '');
+        const className = 'current-line' + (this._shouldRenderMargin() ? ' current-line-margin' : '') + (this._shouldRenderOther() ? ' current-line-margin-both' : '');
         return `<div class="${className}" style="width:${this._contentLeft}px; height:${this._lineHeight}px;"></div>`;
     }
-    _shouldRenderThis() {
+    _shouldRenderMargin() {
         return ((this._renderLineHighlight === 'gutter' || this._renderLineHighlight === 'all')
-            && (!this._renderLineHightlightOnlyWhenFocus || this._focused));
+            && (!this._renderLineHighlightOnlyWhenFocus || this._focused));
+    }
+    _shouldRenderThis() {
+        return true;
     }
     _shouldRenderOther() {
         return ((this._renderLineHighlight === 'line' || this._renderLineHighlight === 'all')
             && this._selectionIsEmpty
-            && (!this._renderLineHightlightOnlyWhenFocus || this._focused));
+            && (!this._renderLineHighlightOnlyWhenFocus || this._focused));
     }
 }
 registerThemingParticipant((theme, collector) => {

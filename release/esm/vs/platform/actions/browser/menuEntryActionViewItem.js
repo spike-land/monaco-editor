@@ -11,13 +11,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { addClasses, createCSSRule, removeClasses, asCSSUrl } from '../../../base/browser/dom.js';
+import { createCSSRule, asCSSUrl, ModifierKeyEmitter } from '../../../base/browser/dom.js';
 import { domEvent } from '../../../base/browser/event.js';
 import { Separator } from '../../../base/common/actions.js';
-import { Emitter } from '../../../base/common/event.js';
 import { IdGenerator } from '../../../base/common/idGenerator.js';
 import { toDisposable, MutableDisposable, DisposableStore } from '../../../base/common/lifecycle.js';
-import { isLinux, isWindows } from '../../../base/common/platform.js';
 import { localize } from '../../../nls.js';
 import { MenuItemAction } from '../common/actions.js';
 import { IContextMenuService } from '../../contextview/browser/contextView.js';
@@ -26,53 +24,7 @@ import { INotificationService } from '../../notification/common/notification.js'
 import { ThemeIcon } from '../../theme/common/themeService.js';
 import { ActionViewItem } from '../../../base/browser/ui/actionbar/actionViewItems.js';
 import { DropdownMenuActionViewItem } from '../../../base/browser/ui/dropdown/dropdownActionViewItem.js';
-// The alternative key on all platforms is alt. On windows we also support shift as an alternative key #44136
-class AlternativeKeyEmitter extends Emitter {
-    constructor(contextMenuService) {
-        super();
-        this._subscriptions = new DisposableStore();
-        this._isPressed = false;
-        this._suppressAltKeyUp = false;
-        this._subscriptions.add(domEvent(document.body, 'keydown')(e => {
-            this.isPressed = e.altKey || ((isWindows || isLinux) && e.shiftKey);
-        }));
-        this._subscriptions.add(domEvent(document.body, 'keyup')(e => {
-            if (this.isPressed) {
-                if (this._suppressAltKeyUp) {
-                    e.preventDefault();
-                }
-            }
-            this._suppressAltKeyUp = false;
-            this.isPressed = false;
-        }));
-        this._subscriptions.add(domEvent(document.body, 'mouseleave')(e => this.isPressed = false));
-        this._subscriptions.add(domEvent(document.body, 'blur')(e => this.isPressed = false));
-        // Workaround since we do not get any events while a context menu is shown
-        this._subscriptions.add(contextMenuService.onDidContextMenu(() => this.isPressed = false));
-    }
-    get isPressed() {
-        return this._isPressed;
-    }
-    set isPressed(value) {
-        this._isPressed = value;
-        this.fire(this._isPressed);
-    }
-    suppressAltKeyUp() {
-        // Sometimes the native alt behavior needs to be suppresed since the alt was already used as an alternative key
-        // Example: windows behavior to toggle tha top level menu #44396
-        this._suppressAltKeyUp = true;
-    }
-    static getInstance(contextMenuService) {
-        if (!AlternativeKeyEmitter.instance) {
-            AlternativeKeyEmitter.instance = new AlternativeKeyEmitter(contextMenuService);
-        }
-        return AlternativeKeyEmitter.instance;
-    }
-    dispose() {
-        super.dispose();
-        this._subscriptions.dispose();
-    }
-}
+import { isWindows, isLinux } from '../../../base/common/platform.js';
 export function createAndFillInActionBarActions(menu, options, target, isPrimaryGroup) {
     const groups = menu.getActions(options);
     // Action bars handle alternative actions on their own so the alternative actions should be ignored
@@ -110,14 +62,14 @@ function fillInActions(groups, target, useAlternativeActions, isPrimaryGroup = g
 const ids = new IdGenerator('menu-item-action-item-icon-');
 const ICON_PATH_TO_CSS_RULES = new Map();
 let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewItem {
-    constructor(_action, _keybindingService, _notificationService, _contextMenuService) {
+    constructor(_action, _keybindingService, _notificationService) {
         super(undefined, _action, { icon: !!(_action.class || _action.item.icon), label: !_action.class && !_action.item.icon });
         this._action = _action;
         this._keybindingService = _keybindingService;
         this._notificationService = _notificationService;
         this._wantsAltCommand = false;
         this._itemClassDispose = this._register(new MutableDisposable());
-        this._altKey = AlternativeKeyEmitter.getInstance(_contextMenuService);
+        this._altKey = ModifierKeyEmitter.getInstance();
     }
     get _commandAction() {
         return this._wantsAltCommand && this._action.alt || this._action;
@@ -125,9 +77,6 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
     onClick(event) {
         event.preventDefault();
         event.stopPropagation();
-        if (this._altKey.isPressed) {
-            this._altKey.suppressAltKeyUp();
-        }
         this.actionRunner.run(this._commandAction, this._context)
             .then(undefined, err => this._notificationService.error(err));
     }
@@ -135,7 +84,7 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
         super.render(container);
         this._updateItemClass(this._action.item);
         let mouseOver = false;
-        let alternativeKeyDown = this._altKey.isPressed;
+        let alternativeKeyDown = this._altKey.keyStatus.altKey || ((isWindows || isLinux) && this._altKey.keyStatus.shiftKey);
         const updateAltState = () => {
             const wantsAltCommand = mouseOver && alternativeKeyDown;
             if (wantsAltCommand !== this._wantsAltCommand) {
@@ -147,7 +96,7 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
         };
         if (this._action.alt) {
             this._register(this._altKey.event(value => {
-                alternativeKeyDown = value;
+                alternativeKeyDown = value.altKey || ((isWindows || isLinux) && value.shiftKey);
                 updateAltState();
             }));
         }
@@ -195,10 +144,10 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
             // theme icons
             const iconClass = ThemeIcon.asClassName(icon);
             if (this.label && iconClass) {
-                addClasses(this.label, iconClass);
+                this.label.classList.add(...iconClass.split(' '));
                 this._itemClassDispose.value = toDisposable(() => {
                     if (this.label) {
-                        removeClasses(this.label, iconClass);
+                        this.label.classList.remove(...iconClass.split(' '));
                     }
                 });
             }
@@ -218,10 +167,10 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
                     ICON_PATH_TO_CSS_RULES.set(iconPathMapKey, iconClass);
                 }
                 if (this.label) {
-                    addClasses(this.label, 'icon', iconClass);
+                    this.label.classList.add('icon', ...iconClass.split(' '));
                     this._itemClassDispose.value = toDisposable(() => {
                         if (this.label) {
-                            removeClasses(this.label, 'icon', iconClass);
+                            this.label.classList.remove('icon', ...iconClass.split(' '));
                         }
                     });
                 }
@@ -231,33 +180,32 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
 };
 MenuEntryActionViewItem = __decorate([
     __param(1, IKeybindingService),
-    __param(2, INotificationService),
-    __param(3, IContextMenuService)
+    __param(2, INotificationService)
 ], MenuEntryActionViewItem);
 export { MenuEntryActionViewItem };
 let SubmenuEntryActionViewItem = class SubmenuEntryActionViewItem extends DropdownMenuActionViewItem {
     constructor(action, _notificationService, _contextMenuService) {
         var _a;
-        const classNames = [];
+        let classNames;
         if (action.item.icon) {
             if (ThemeIcon.isThemeIcon(action.item.icon)) {
-                classNames.push(ThemeIcon.asClassName(action.item.icon));
+                classNames = ThemeIcon.asClassName(action.item.icon);
             }
             else if ((_a = action.item.icon.dark) === null || _a === void 0 ? void 0 : _a.scheme) {
                 const iconPathMapKey = action.item.icon.dark.toString();
                 if (ICON_PATH_TO_CSS_RULES.has(iconPathMapKey)) {
-                    classNames.push('icon', ICON_PATH_TO_CSS_RULES.get(iconPathMapKey));
+                    classNames = ['icon', ICON_PATH_TO_CSS_RULES.get(iconPathMapKey)];
                 }
                 else {
                     const className = ids.nextId();
-                    classNames.push('icon', className);
+                    classNames = ['icon', className];
                     createCSSRule(`.icon.${className}`, `background-image: ${asCSSUrl(action.item.icon.light || action.item.icon.dark)}`);
                     createCSSRule(`.vs-dark .icon.${className}, .hc-black .icon.${className}`, `background-image: ${asCSSUrl(action.item.icon.dark)}`);
                     ICON_PATH_TO_CSS_RULES.set(iconPathMapKey, className);
                 }
             }
         }
-        super(action, action.actions, _contextMenuService, { classNames });
+        super(action, action.actions, _contextMenuService, { classNames: classNames, menuAsChild: true });
     }
 };
 SubmenuEntryActionViewItem = __decorate([

@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var _a;
 import { TimeoutTimer } from '../../../base/common/async.js';
 import * as strings from '../../../base/common/strings.js';
 import { LineTokens } from '../../common/core/lineTokens.js';
@@ -9,6 +10,7 @@ import { TokenizationRegistry } from '../../common/modes.js';
 import { RenderLineInput, renderViewLine2 as renderViewLine } from '../../common/viewLayout/viewLineRenderer.js';
 import { ViewLineRenderingData } from '../../common/viewModel/viewModel.js';
 import { MonarchTokenizer } from '../common/monarch/monarchLexer.js';
+const ttPolicy = (_a = window.trustedTypes) === null || _a === void 0 ? void 0 : _a.createPolicy('standaloneColorizer', { createHTML: value => value });
 export class Colorizer {
     static colorizeElement(themeService, modeService, domNode, options) {
         options = options || {};
@@ -22,7 +24,9 @@ export class Colorizer {
         let text = domNode.firstChild ? domNode.firstChild.nodeValue : '';
         domNode.className += ' ' + theme;
         let render = (str) => {
-            domNode.innerHTML = str;
+            var _a;
+            const trustedhtml = (_a = ttPolicy === null || ttPolicy === void 0 ? void 0 : ttPolicy.createHTML(str)) !== null && _a !== void 0 ? _a : str;
+            domNode.innerHTML = trustedhtml;
         };
         return this.colorize(modeService, text || '', mimeType, options).then(render, (err) => console.error(err));
     }
@@ -34,7 +38,7 @@ export class Colorizer {
         if (strings.startsWithUTF8BOM(text)) {
             text = text.substr(1);
         }
-        let lines = text.split(/\r\n|\r|\n/);
+        let lines = strings.splitLines(text);
         let language = modeService.getModeId(mimeType);
         if (!language) {
             return Promise.resolve(_fakeColorize(lines, tabSize));

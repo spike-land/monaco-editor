@@ -8,7 +8,7 @@ import { onUnexpectedExternalError } from '../../../base/common/errors.js';
 import { LRUCache } from '../../../base/common/map.js';
 import { DocumentSymbolProviderRegistry } from '../../common/modes.js';
 import { Iterable } from '../../../base/common/iterator.js';
-import { MovingAverage } from '../../../base/common/numbers.js';
+import { LanguageFeatureRequestDelays } from '../../common/modes/languageFeatureRegistry.js';
 export class TreeElement {
     remove() {
         if (this.parent) {
@@ -83,13 +83,7 @@ export class OutlineModel extends TreeElement {
             // keep moving average of request durations
             const now = Date.now();
             data.promise.then(() => {
-                let key = this._keys.for(textModel, false);
-                let avg = this._requestDurations.get(key);
-                if (!avg) {
-                    avg = new MovingAverage();
-                    this._requestDurations.set(key, avg);
-                }
-                avg.update(Date.now() - now);
+                this._requestDurations.update(textModel, Date.now() - now);
             });
         }
         if (data.model) {
@@ -192,7 +186,7 @@ export class OutlineModel extends TreeElement {
         return this;
     }
 }
-OutlineModel._requestDurations = new LRUCache(50, 0.7);
+OutlineModel._requestDurations = new LanguageFeatureRequestDelays(DocumentSymbolProviderRegistry, 350);
 OutlineModel._requests = new LRUCache(9, 0.75);
 OutlineModel._keys = new class {
     constructor() {

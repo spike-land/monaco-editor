@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as strings from '../../../base/common/strings.js';
 import { CharacterClassifier } from '../core/characterClassifier.js';
-import { LineBreakData } from './splitLinesCollection.js';
+import { LineBreakData } from './viewModel.js';
 class WrappingCharacterClassifier extends CharacterClassifier {
     constructor(BREAK_BEFORE, BREAK_AFTER) {
         super(0 /* NONE */);
@@ -40,7 +40,7 @@ export class MonospaceLineBreaksComputerFactory {
         this.classifier = new WrappingCharacterClassifier(breakBeforeChars, breakAfterChars);
     }
     static create(options) {
-        return new MonospaceLineBreaksComputerFactory(options.get(108 /* wordWrapBreakBeforeCharacters */), options.get(107 /* wordWrapBreakAfterCharacters */));
+        return new MonospaceLineBreaksComputerFactory(options.get(113 /* wordWrapBreakBeforeCharacters */), options.get(112 /* wordWrapBreakAfterCharacters */));
     }
     createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent) {
         tabSize = tabSize | 0; //@perf

@@ -216,7 +216,7 @@ let StandaloneDiffEditor = class StandaloneDiffEditor extends DiffEditorWidget {
         if (typeof options.theme === 'string') {
             options.theme = themeService.setTheme(options.theme);
         }
-        super(domElement, options, clipboardService, editorWorkerService, contextKeyService, instantiationService, codeEditorService, themeService, notificationService, contextMenuService, editorProgressService);
+        super(domElement, options, {}, clipboardService, editorWorkerService, contextKeyService, instantiationService, codeEditorService, themeService, notificationService, contextMenuService, editorProgressService);
         this._contextViewService = contextViewService;
         this._configurationService = configurationService;
         this._standaloneThemeService = themeService;

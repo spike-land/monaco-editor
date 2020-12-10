@@ -78,14 +78,20 @@ let ViewportSemanticTokensContribution = class ViewportSemanticTokensContributio
             return;
         }
         const model = this._editor.getModel();
-        if (model.hasSemanticTokens()) {
+        if (model.hasCompleteSemanticTokens()) {
             return;
         }
         if (!isSemanticColoringEnabled(model, this._themeService, this._configurationService)) {
+            if (model.hasSomeSemanticTokens()) {
+                model.setSemanticTokens(null, false);
+            }
             return;
         }
         const provider = ViewportSemanticTokensContribution._getSemanticColoringProvider(model);
         if (!provider) {
+            if (model.hasSomeSemanticTokens()) {
+                model.setSemanticTokens(null, false);
+            }
             return;
         }
         const styling = this._modelService.getSemanticTokensProviderStyling(provider);

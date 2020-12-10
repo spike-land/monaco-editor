@@ -20,6 +20,7 @@ export var EditorContextKeys;
      */
     EditorContextKeys.textInputFocus = new RawContextKey('textInputFocus', false);
     EditorContextKeys.readOnly = new RawContextKey('editorReadonly', false);
+    EditorContextKeys.inDiffEditor = new RawContextKey('inDiffEditor', false);
     EditorContextKeys.columnSelection = new RawContextKey('editorColumnSelection', false);
     EditorContextKeys.writable = EditorContextKeys.readOnly.toNegated();
     EditorContextKeys.hasNonEmptySelection = new RawContextKey('editorHasSelection', false);

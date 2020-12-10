@@ -110,6 +110,7 @@ let CodeEditorServiceImpl = class CodeEditorServiceImpl extends AbstractCodeEdit
                 provider = new DecorationSubTypeOptionsProvider(this._themeService, styleSheet, providerArgs);
             }
             this._decorationOptionProviders.set(key, provider);
+            this._onDecorationTypeRegistered.fire(key);
         }
         provider.refCount++;
     }
@@ -136,7 +137,7 @@ CodeEditorServiceImpl = __decorate([
     __param(0, IThemeService)
 ], CodeEditorServiceImpl);
 export { CodeEditorServiceImpl };
-class DecorationSubTypeOptionsProvider {
+export class DecorationSubTypeOptionsProvider {
     constructor(themeService, styleSheet, providerArgs) {
         this._styleSheet = styleSheet;
         this._styleSheet.ref();
@@ -167,7 +168,7 @@ class DecorationSubTypeOptionsProvider {
         this._styleSheet.unref();
     }
 }
-class DecorationTypeOptionsProvider {
+export class DecorationTypeOptionsProvider {
     constructor(themeService, styleSheet, providerArgs) {
         this._disposables = new DisposableStore();
         this._styleSheet = styleSheet;

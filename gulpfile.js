@@ -185,7 +185,7 @@ function addPluginContribs(type) {
 			var contribContents = fs.readFileSync(contribPath).toString();
 
 			contribContents = contribContents.replace(
-				/define\((['"][a-z\/\-]+\/fillers\/@zedvision/monaco-editor-core['"]),\[\],/,
+				/define\((['"][a-z\/\-]+\/fillers\/\@zedvision\/monaco-editor-core['"]),\[\],/,
 				'define($1,[\'vs/editor/editor.api\'],'
 			);
 
@@ -258,7 +258,7 @@ function ESM_pluginStream(plugin, destinationPath) {
 
 				if (!/(^\.\/)|(^\.\.\/)/.test(importText)) {
 					// non-relative import
-					if (!/^@zedvision/monaco-editor-core/.test(importText)) {
+					if (!/^\@zedvision\/monaco-editor-core/.test(importText)) {
 						console.error(`Non-relative import for unknown module: ${importText} in ${data.path}`);
 						process.exit(0);
 					}

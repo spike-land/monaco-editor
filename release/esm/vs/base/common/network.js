@@ -54,6 +54,11 @@ export var Schemas;
      * Scheme used for extension pages
      */
     Schemas.extension = 'extension';
+    /**
+     * Scheme used as a replacement of `file` scheme to load
+     * files with our custom protocol handler (desktop only).
+     */
+    Schemas.vscodeFileResource = 'vscode-file';
 })(Schemas || (Schemas = {}));
 class RemoteAuthoritiesImpl {
     constructor() {
@@ -90,3 +95,39 @@ class RemoteAuthoritiesImpl {
     }
 }
 export const RemoteAuthorities = new RemoteAuthoritiesImpl();
+class FileAccessImpl {
+    constructor() {
+        this.FALLBACK_AUTHORITY = 'vscode-app';
+    }
+    asBrowserUri(uriOrModule, moduleIdToUrl) {
+        const uri = this.toUri(uriOrModule, moduleIdToUrl);
+        // Handle remote URIs via `RemoteAuthorities`
+        if (uri.scheme === Schemas.vscodeRemote) {
+            return RemoteAuthorities.rewrite(uri);
+        }
+        // Only convert the URI if we are in a native context and it has `file:` scheme
+        if (platform.isElectronSandboxed && platform.isNative && uri.scheme === Schemas.file) {
+            return this.toCodeFileUri(uri);
+        }
+        return uri;
+    }
+    toCodeFileUri(uri) {
+        return uri.with({
+            scheme: Schemas.vscodeFileResource,
+            // We need to provide an authority here so that it can serve
+            // as origin for network and loading matters in chromium.
+            // If the URI is not coming with an authority already, we
+            // add our own
+            authority: uri.authority || this.FALLBACK_AUTHORITY,
+            query: null,
+            fragment: null
+        });
+    }
+    toUri(uriOrModule, moduleIdToUrl) {
+        if (URI.isUri(uriOrModule)) {
+            return uriOrModule;
+        }
+        return URI.parse(moduleIdToUrl.toUrl(uriOrModule));
+    }
+}
+export const FileAccess = new FileAccessImpl();

@@ -32,21 +32,22 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
         this.provideLabelPick(picker, localize('cannotRunGotoSymbolWithoutEditor', "To go to a symbol, first open a text editor with symbol information."));
         return Disposable.None;
     }
-    provideWithTextEditor(editor, picker, token) {
+    provideWithTextEditor(context, picker, token) {
+        const editor = context.editor;
         const model = this.getModel(editor);
         if (!model) {
             return Disposable.None;
         }
         // Provide symbols from model if available in registry
         if (DocumentSymbolProviderRegistry.has(model)) {
-            return this.doProvideWithEditorSymbols(editor, model, picker, token);
+            return this.doProvideWithEditorSymbols(context, model, picker, token);
         }
         // Otherwise show an entry for a model without registry
         // But give a chance to resolve the symbols at a later
         // point if possible
-        return this.doProvideWithoutEditorSymbols(editor, model, picker, token);
+        return this.doProvideWithoutEditorSymbols(context, model, picker, token);
     }
-    doProvideWithoutEditorSymbols(editor, model, picker, token) {
+    doProvideWithoutEditorSymbols(context, model, picker, token) {
         const disposables = new DisposableStore();
         // Generic pick for not having any symbol information
         this.provideLabelPick(picker, localize('cannotRunGotoSymbolWithoutSymbolProvider', "The active text editor does not provide symbol information."));
@@ -60,7 +61,7 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
             if (!result || token.isCancellationRequested) {
                 return;
             }
-            disposables.add(this.doProvideWithEditorSymbols(editor, model, picker, token));
+            disposables.add(this.doProvideWithEditorSymbols(context, model, picker, token));
         }))();
         return disposables;
     }
@@ -87,13 +88,14 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
             return symbolProviderRegistryPromise;
         });
     }
-    doProvideWithEditorSymbols(editor, model, picker, token) {
+    doProvideWithEditorSymbols(context, model, picker, token) {
+        const editor = context.editor;
         const disposables = new DisposableStore();
         // Goto symbol once picked
         disposables.add(picker.onDidAccept(event => {
             const [item] = picker.selectedItems;
             if (item && item.range) {
-                this.gotoLocation(editor, { range: item.range.selection, keyMods: picker.keyMods, preserveFocus: event.inBackground });
+                this.gotoLocation(context, { range: item.range.selection, keyMods: picker.keyMods, preserveFocus: event.inBackground });
                 if (!event.inBackground) {
                     picker.hide();
                 }
@@ -102,7 +104,7 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
         // Goto symbol side by side if enabled
         disposables.add(picker.onDidTriggerItemButton(({ item }) => {
             if (item && item.range) {
-                this.gotoLocation(editor, { range: item.range.selection, keyMods: picker.keyMods, forceSideBySide: true });
+                this.gotoLocation(context, { range: item.range.selection, keyMods: picker.keyMods, forceSideBySide: true });
                 picker.hide();
             }
         }));
@@ -382,7 +384,7 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
                 containerName: entry.containerName || overrideContainerLabel,
                 range: entry.range,
                 selectionRange: entry.selectionRange,
-                children: undefined,
+                children: undefined, // we flatten it...
             });
             // Recurse over children
             if (entry.children) {

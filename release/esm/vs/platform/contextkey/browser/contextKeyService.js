@@ -11,8 +11,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Event, PauseableEmitter } from '../../../base/common/event.js';
+import { PauseableEmitter } from '../../../base/common/event.js';
+import { Iterable } from '../../../base/common/iterator.js';
 import { DisposableStore } from '../../../base/common/lifecycle.js';
+import { TernarySearchTree } from '../../../base/common/map.js';
 import { CommandsRegistry } from '../../commands/common/commands.js';
 import { IConfigurationService } from '../../configuration/common/configuration.js';
 import { IContextKeyService, SET_CONTEXT_COMMAND_ID } from '../common/contextkey.js';
@@ -68,11 +70,11 @@ class ConfigAwareContextValuesContainer extends Context {
     constructor(id, _configurationService, emitter) {
         super(id, null);
         this._configurationService = _configurationService;
-        this._values = new Map();
+        this._values = TernarySearchTree.forConfigKeys();
         this._listener = this._configurationService.onDidChangeConfiguration(event => {
             if (event.source === 6 /* DEFAULT */) {
                 // new setting, reset everything
-                const allKeys = Array.from(this._values.keys());
+                const allKeys = Array.from(Iterable.map(this._values, ([k]) => k));
                 this._values.clear();
                 emitter.fire(new ArrayContextKeyChangeEvent(allKeys));
             }
@@ -80,9 +82,14 @@ class ConfigAwareContextValuesContainer extends Context {
                 const changedKeys = [];
                 for (const configKey of event.affectedKeys) {
                     const contextKey = `config.${configKey}`;
+                    const cachedItems = this._values.findSuperstr(contextKey);
+                    if (cachedItems !== undefined) {
+                        changedKeys.push(...Iterable.map(cachedItems, ([key]) => key));
+                        this._values.deleteSuperstr(contextKey);
+                    }
                     if (this._values.has(contextKey)) {
-                        this._values.delete(contextKey);
                         changedKeys.push(contextKey);
+                        this._values.delete(contextKey);
                     }
                 }
                 emitter.fire(new ArrayContextKeyChangeEvent(changedKeys));
@@ -111,6 +118,9 @@ class ConfigAwareContextValuesContainer extends Context {
             default:
                 if (Array.isArray(configValue)) {
                     value = JSON.stringify(configValue);
+                }
+                else {
+                    value = configValue;
                 }
         }
         this._values.set(key, value);
@@ -306,21 +316,36 @@ class ScopedContextKeyService extends AbstractContextKeyService {
     constructor(parent, domNode) {
         super(parent.createChildContext());
         this._parent = parent;
+        this.updateParentChangeListener();
         if (domNode) {
             this._domNode = domNode;
+            if (this._domNode.hasAttribute(KEYBINDING_CONTEXT_ATTR)) {
+                console.error('Element already has context attribute');
+            }
             this._domNode.setAttribute(KEYBINDING_CONTEXT_ATTR, String(this._myContextId));
         }
     }
+    updateParentChangeListener() {
+        if (this._parentChangeListener) {
+            this._parentChangeListener.dispose();
+        }
+        this._parentChangeListener = this._parent.onDidChangeContext(e => {
+            // Forward parent events to this listener. Parent will change.
+            this._onDidChangeContext.fire(e);
+        });
+    }
     dispose() {
+        var _a;
         this._isDisposed = true;
         this._parent.disposeContext(this._myContextId);
+        (_a = this._parentChangeListener) === null || _a === void 0 ? void 0 : _a.dispose();
         if (this._domNode) {
             this._domNode.removeAttribute(KEYBINDING_CONTEXT_ATTR);
             this._domNode = undefined;
         }
     }
     get onDidChangeContext() {
-        return Event.any(this._parent.onDidChangeContext, this._onDidChangeContext.event);
+        return this._onDidChangeContext.event;
     }
     getContextValuesContainer(contextId) {
         if (this._isDisposed) {

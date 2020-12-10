@@ -31,7 +31,9 @@ export class Checkbox extends Widget {
         if (this._opts.actionClassName) {
             classes.push(this._opts.actionClassName);
         }
-        classes.push(this._checked ? 'checked' : 'unchecked');
+        if (this._checked) {
+            classes.push('checked');
+        }
         this.domNode = document.createElement('div');
         this.domNode.title = this._opts.title;
         this.domNode.className = classes.join(' ');
@@ -68,12 +70,7 @@ export class Checkbox extends Widget {
     set checked(newIsChecked) {
         this._checked = newIsChecked;
         this.domNode.setAttribute('aria-checked', String(this._checked));
-        if (this._checked) {
-            this.domNode.classList.add('checked');
-        }
-        else {
-            this.domNode.classList.remove('checked');
-        }
+        this.domNode.classList.toggle('checked', this._checked);
         this.applyStyles();
     }
     width() {

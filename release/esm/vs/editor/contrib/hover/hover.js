@@ -42,8 +42,7 @@ let ModesHoverController = class ModesHoverController {
         this._hoverClicked = false;
         this._hookEvents();
         this._didChangeConfigurationHandler = this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(46 /* hover */)) {
-                this._hideWidgets();
+            if (e.hasChanged(48 /* hover */)) {
                 this._unhookEvents();
                 this._hookEvents();
             }
@@ -67,7 +66,7 @@ let ModesHoverController = class ModesHoverController {
     }
     _hookEvents() {
         const hideWidgetsEventHandler = () => this._hideWidgets();
-        const hoverOpts = this._editor.getOption(46 /* hover */);
+        const hoverOpts = this._editor.getOption(48 /* hover */);
         this._isHoverEnabled = hoverOpts.enabled;
         this._isHoverSticky = hoverOpts.sticky;
         if (this._isHoverEnabled) {
@@ -78,7 +77,7 @@ let ModesHoverController = class ModesHoverController {
             this._toUnhook.add(this._editor.onDidChangeModelDecorations(() => this._onModelDecorationsChanged()));
         }
         else {
-            this._toUnhook.add(this._editor.onMouseMove(hideWidgetsEventHandler));
+            this._toUnhook.add(this._editor.onMouseMove((e) => this._onEditorMouseMove(e)));
             this._toUnhook.add(this._editor.onKeyDown((e) => this._onKeyDown(e)));
         }
         this._toUnhook.add(this._editor.onMouseLeave(hideWidgetsEventHandler));
@@ -118,6 +117,7 @@ let ModesHoverController = class ModesHoverController {
         this._isMouseDown = false;
     }
     _onEditorMouseMove(mouseEvent) {
+        var _a, _b;
         let targetType = mouseEvent.target.type;
         if (this._isMouseDown && this._hoverClicked && this.contentWidget.isColorPickerVisible()) {
             return;
@@ -126,12 +126,17 @@ let ModesHoverController = class ModesHoverController {
             // mouse moved on top of content hover widget
             return;
         }
+        if (!this._isHoverSticky && targetType === 9 /* CONTENT_WIDGET */ && mouseEvent.target.detail === ModesContentHoverWidget.ID
+            && ((_a = this._contentWidget.value) === null || _a === void 0 ? void 0 : _a.isColorPickerVisible())) {
+            // though the hover is not sticky, the color picker needs to.
+            return;
+        }
         if (this._isHoverSticky && targetType === 12 /* OVERLAY_WIDGET */ && mouseEvent.target.detail === ModesGlyphHoverWidget.ID) {
             // mouse moved on top of overlay hover widget
             return;
         }
         if (targetType === 7 /* CONTENT_EMPTY */) {
-            const epsilon = this._editor.getOption(36 /* fontInfo */).typicalHalfwidthCharacterWidth / 2;
+            const epsilon = this._editor.getOption(38 /* fontInfo */).typicalHalfwidthCharacterWidth / 2;
             const data = mouseEvent.target.detail;
             if (data && !data.isAfterLines && typeof data.horizontalDistanceToText === 'number' && data.horizontalDistanceToText < epsilon) {
                 // Let hover kick in even when the mouse is technically in the empty area after a line, given the distance is small enough
@@ -141,7 +146,17 @@ let ModesHoverController = class ModesHoverController {
         if (targetType === 6 /* CONTENT_TEXT */) {
             this.glyphWidget.hide();
             if (this._isHoverEnabled && mouseEvent.target.range) {
-                this.contentWidget.startShowingAt(mouseEvent.target.range, 0 /* Delayed */, false);
+                // TODO@rebornix. This should be removed if we move Color Picker out of Hover component.
+                // Check if mouse is hovering on color decorator
+                const hoverOnColorDecorator = [...((_b = mouseEvent.target.element) === null || _b === void 0 ? void 0 : _b.classList.values()) || []].find(className => className.startsWith('ced-colorBox'))
+                    && mouseEvent.target.range.endColumn - mouseEvent.target.range.startColumn === 1;
+                if (hoverOnColorDecorator) {
+                    // shift the mouse focus by one as color decorator is a `before` decoration of next character.
+                    this.contentWidget.startShowingAt(new Range(mouseEvent.target.range.startLineNumber, mouseEvent.target.range.startColumn + 1, mouseEvent.target.range.endLineNumber, mouseEvent.target.range.endColumn + 1), 0 /* Delayed */, false);
+                }
+                else {
+                    this.contentWidget.startShowingAt(mouseEvent.target.range, 0 /* Delayed */, false);
+                }
             }
         }
         else if (targetType === 2 /* GUTTER_GLYPH_MARGIN */) {

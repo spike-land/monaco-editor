@@ -137,7 +137,7 @@ class ExecCommandCopyWithSyntaxHighlightingAction extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const emptySelectionClipboard = editor.getOption(26 /* emptySelectionClipboard */);
+        const emptySelectionClipboard = editor.getOption(28 /* emptySelectionClipboard */);
         if (!emptySelectionClipboard && editor.getSelection().isEmpty()) {
             return;
         }
@@ -157,7 +157,7 @@ function registerExecCommandImpl(target, browserCommand) {
         const focusedEditor = accessor.get(ICodeEditorService).getFocusedCodeEditor();
         if (focusedEditor && focusedEditor.hasTextFocus()) {
             // Do not execute if there is no selection and empty selection clipboard is off
-            const emptySelectionClipboard = focusedEditor.getOption(26 /* emptySelectionClipboard */);
+            const emptySelectionClipboard = focusedEditor.getOption(28 /* emptySelectionClipboard */);
             const selection = focusedEditor.getSelection();
             if (selection && selection.isEmpty() && !emptySelectionClipboard) {
                 return true;
@@ -194,7 +194,7 @@ if (PasteAction) {
                         let multicursorText = null;
                         let mode = null;
                         if (metadata) {
-                            pasteOnNewLine = (focusedEditor.getOption(26 /* emptySelectionClipboard */) && !!metadata.isFromEmptySelection);
+                            pasteOnNewLine = (focusedEditor.getOption(28 /* emptySelectionClipboard */) && !!metadata.isFromEmptySelection);
                             multicursorText = (typeof metadata.multicursorText !== 'undefined' ? metadata.multicursorText : null);
                             mode = metadata.mode;
                         }

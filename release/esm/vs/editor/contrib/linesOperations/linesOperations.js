@@ -49,10 +49,7 @@ class AbstractCopyLinesAction extends EditorAction {
         }
         const commands = [];
         for (const selection of selections) {
-            if (selection.ignore) {
-                continue;
-            }
-            commands.push(new CopyLinesCommand(selection.selection, this.down));
+            commands.push(new CopyLinesCommand(selection.selection, this.down, selection.ignore));
         }
         editor.pushUndoStop();
         editor.executeCommands(this.id, commands);
@@ -808,7 +805,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        let wordSeparators = editor.getOption(105 /* wordSeparators */);
+        let wordSeparators = editor.getOption(110 /* wordSeparators */);
         let commands = [];
         for (let i = 0, len = selections.length; i < len; i++) {
             let selection = selections[i];

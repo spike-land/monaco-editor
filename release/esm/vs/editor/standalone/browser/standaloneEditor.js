@@ -33,6 +33,7 @@ import { IAccessibilityService } from '../../../platform/accessibility/common/ac
 import { clearAllFontInfos } from '../../browser/config/configuration.js';
 import { IEditorProgressService } from '../../../platform/progress/common/progress.js';
 import { IClipboardService } from '../../../platform/clipboard/common/clipboardService.js';
+import { splitLines } from '../../../base/common/strings.js';
 function withAllStandaloneServices(domElement, override, callback) {
     let services = new DynamicStandaloneServices(domElement, override);
     let simpleEditorModelResolverService = null;
@@ -213,7 +214,7 @@ export function tokenize(text, languageId) {
     // Needed in order to get the mode registered for subsequent look-ups
     modeService.triggerMode(languageId);
     let tokenizationSupport = getSafeTokenizationSupport(languageId);
-    let lines = text.split(/\r\n|\r|\n/);
+    let lines = splitLines(text);
     let result = [];
     let state = tokenizationSupport.getInitialState();
     for (let i = 0, len = lines.length; i < len; i++) {

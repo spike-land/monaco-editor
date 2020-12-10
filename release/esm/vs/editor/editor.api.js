@@ -6,7 +6,6 @@ import { EditorOptions } from './common/config/editorOptions.js';
 import { createMonacoBaseAPI } from './common/standalone/standaloneBase.js';
 import { createMonacoEditorAPI } from './standalone/browser/standaloneEditor.js';
 import { createMonacoLanguagesAPI } from './standalone/browser/standaloneLanguages.js';
-const global = self;
 // Set defaults for standalone editor
 EditorOptions.wrappingIndent.defaultValue = 0 /* None */;
 EditorOptions.glyphMargin.defaultValue = false;
@@ -29,9 +28,9 @@ export const Uri = api.Uri;
 export const Token = api.Token;
 export const editor = api.editor;
 export const languages = api.languages;
-global.monaco = api;
-if (typeof global.require !== 'undefined' && typeof global.require.config === 'function') {
-    global.require.config({
+self.monaco = api;
+if (typeof self.require !== 'undefined' && typeof self.require.config === 'function') {
+    self.require.config({
         ignoreDuplicateModules: [
             'vscode-languageserver-types',
             'vscode-languageserver-types/main',

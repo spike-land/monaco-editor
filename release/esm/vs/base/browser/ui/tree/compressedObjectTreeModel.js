@@ -27,10 +27,10 @@ export function compress(element) {
         if (children.length !== 1) {
             break;
         }
-        element = children[0];
-        if (element.incompressible) {
+        if (children[0].incompressible) {
             break;
         }
+        element = children[0];
         elements.push(element.element);
     }
     return {

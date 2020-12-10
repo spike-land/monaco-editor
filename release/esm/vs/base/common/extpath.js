@@ -8,32 +8,32 @@ import { sep, posix } from './path.js';
 export function toSlashes(osPath) {
     return osPath.replace(/[\\/]/g, posix.sep);
 }
-export function isEqualOrParent(path, candidate, ignoreCase, separator = sep) {
-    if (path === candidate) {
+export function isEqualOrParent(base, parentCandidate, ignoreCase, separator = sep) {
+    if (base === parentCandidate) {
         return true;
     }
-    if (!path || !candidate) {
+    if (!base || !parentCandidate) {
         return false;
     }
-    if (candidate.length > path.length) {
+    if (parentCandidate.length > base.length) {
         return false;
     }
     if (ignoreCase) {
-        const beginsWith = startsWithIgnoreCase(path, candidate);
+        const beginsWith = startsWithIgnoreCase(base, parentCandidate);
         if (!beginsWith) {
             return false;
         }
-        if (candidate.length === path.length) {
+        if (parentCandidate.length === base.length) {
             return true; // same path, different casing
         }
-        let sepOffset = candidate.length;
-        if (candidate.charAt(candidate.length - 1) === separator) {
+        let sepOffset = parentCandidate.length;
+        if (parentCandidate.charAt(parentCandidate.length - 1) === separator) {
             sepOffset--; // adjust the expected sep offset in case our candidate already ends in separator character
         }
-        return path.charAt(sepOffset) === separator;
+        return base.charAt(sepOffset) === separator;
     }
-    if (candidate.charAt(candidate.length - 1) !== separator) {
-        candidate += separator;
+    if (parentCandidate.charAt(parentCandidate.length - 1) !== separator) {
+        parentCandidate += separator;
     }
-    return path.indexOf(candidate) === 0;
+    return base.indexOf(parentCandidate) === 0;
 }

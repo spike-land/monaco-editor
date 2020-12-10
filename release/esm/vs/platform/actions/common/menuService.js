@@ -146,8 +146,8 @@ let Menu = class Menu {
         return Menu._compareTitles(isIMenuItem(a) ? a.command.title : a.title, isIMenuItem(b) ? b.command.title : b.title);
     }
     static _compareTitles(a, b) {
-        const aStr = typeof a === 'string' ? a : a.value;
-        const bStr = typeof b === 'string' ? b : b.value;
+        const aStr = typeof a === 'string' ? a : a.original;
+        const bStr = typeof b === 'string' ? b : b.original;
         return aStr.localeCompare(bStr);
     }
 };

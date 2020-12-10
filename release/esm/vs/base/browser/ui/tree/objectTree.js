@@ -79,8 +79,9 @@ class CompressibleRenderer {
     }
     renderTwistie(element, twistieElement) {
         if (this.renderer.renderTwistie) {
-            this.renderer.renderTwistie(element, twistieElement);
+            return this.renderer.renderTwistie(element, twistieElement);
         }
+        return false;
     }
 }
 __decorate([

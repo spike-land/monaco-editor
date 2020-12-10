@@ -7,7 +7,7 @@ import * as dom from '../../../base/browser/dom.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
 import { Color, RGBA } from '../../../base/common/color.js';
 import { MarkdownString, isEmptyMarkdownString, markedStringsEquals } from '../../../base/common/htmlContent.js';
-import { toDisposable, DisposableStore, combinedDisposable, MutableDisposable } from '../../../base/common/lifecycle.js';
+import { toDisposable, DisposableStore, combinedDisposable, MutableDisposable, Disposable } from '../../../base/common/lifecycle.js';
 import { Position } from '../../common/core/position.js';
 import { Range } from '../../common/core/range.js';
 import { ModelDecorationOptions } from '../../common/model/textModel.js';
@@ -19,7 +19,7 @@ import { ColorPickerWidget } from '../colorPicker/colorPickerWidget.js';
 import { getHover } from './getHover.js';
 import { HoverOperation } from './hoverOperation.js';
 import { ContentHoverWidget } from './hoverWidgets.js';
-import { MarkdownRenderer } from '../markdown/markdownRenderer.js';
+import { MarkdownRenderer } from '../../browser/core/markdownRenderer.js';
 import { registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
 import { coalesce, isNonEmptyArray, asArray } from '../../../base/common/arrays.js';
 import { IMarkerData, MarkerSeverity } from '../../../platform/markers/common/markers.js';
@@ -27,7 +27,7 @@ import { basename } from '../../../base/common/resources.js';
 import { onUnexpectedError } from '../../../base/common/errors.js';
 import { NullOpenerService } from '../../../platform/opener/common/opener.js';
 import { MarkerController, NextMarkerAction } from '../gotoError/gotoError.js';
-import { createCancelablePromise } from '../../../base/common/async.js';
+import { createCancelablePromise, disposableTimeout } from '../../../base/common/async.js';
 import { getCodeActions } from '../codeAction/codeAction.js';
 import { QuickFixAction, QuickFixController } from '../codeAction/codeActionCommands.js';
 import { CodeActionKind } from '../codeAction/types.js';
@@ -153,6 +153,7 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
         this._modeService = _modeService;
         this._openerService = _openerService;
         this.renderDisposable = this._register(new MutableDisposable());
+        this.recentMarkerCodeActionsInfo = undefined;
         this._messages = [];
         this._lastRange = null;
         this._computer = new ModesContentComputer(this._editor, markerDecorationsService);
@@ -160,20 +161,38 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
         this._isChangingDecorations = false;
         this._shouldFocus = false;
         this._colorPicker = null;
-        this._hoverOperation = new HoverOperation(this._computer, result => this._withResult(result, true), null, result => this._withResult(result, false), this._editor.getOption(46 /* hover */).delay);
+        this._hoverOperation = new HoverOperation(this._computer, result => this._withResult(result, true), null, result => this._withResult(result, false), this._editor.getOption(48 /* hover */).delay);
         this._register(dom.addStandardDisposableListener(this.getDomNode(), dom.EventType.FOCUS, () => {
             if (this._colorPicker) {
-                dom.addClass(this.getDomNode(), 'colorpicker-hover');
+                this.getDomNode().classList.add('colorpicker-hover');
             }
         }));
         this._register(dom.addStandardDisposableListener(this.getDomNode(), dom.EventType.BLUR, () => {
-            dom.removeClass(this.getDomNode(), 'colorpicker-hover');
+            this.getDomNode().classList.remove('colorpicker-hover');
         }));
         this._register(editor.onDidChangeConfiguration((e) => {
-            this._hoverOperation.setHoverTime(this._editor.getOption(46 /* hover */).delay);
+            this._hoverOperation.setHoverTime(this._editor.getOption(48 /* hover */).delay);
         }));
         this._register(TokenizationRegistry.onDidChange((e) => {
             if (this.isVisible && this._lastRange && this._messages.length > 0) {
+                this._messages = this._messages.map(msg => {
+                    var _a, _b;
+                    // If a color hover is visible, we need to update the message that
+                    // created it so that the color matches the last chosen color
+                    if (msg instanceof ColorHover && !!((_a = this._lastRange) === null || _a === void 0 ? void 0 : _a.intersectRanges(msg.range)) && ((_b = this._colorPicker) === null || _b === void 0 ? void 0 : _b.model.color)) {
+                        const color = this._colorPicker.model.color;
+                        const newColor = {
+                            red: color.rgba.r / 255,
+                            green: color.rgba.g / 255,
+                            blue: color.rgba.b / 255,
+                            alpha: color.rgba.a
+                        };
+                        return new ColorHover(msg.range, newColor, msg.provider);
+                    }
+                    else {
+                        return msg;
+                    }
+                });
                 this._hover.contentsDomNode.textContent = '';
                 this._renderMessages(this._lastRange, this._messages);
             }
@@ -290,7 +309,7 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
                 let colorInfo = { range: msg.range, color: msg.color };
                 // create blank olor picker model and widget first to ensure it's positioned correctly.
                 const model = new ColorPickerModel(color, [], 0);
-                const widget = new ColorPickerWidget(fragment, model, this._editor.getOption(115 /* pixelRatio */), this._themeService);
+                const widget = new ColorPickerWidget(fragment, model, this._editor.getOption(121 /* pixelRatio */), this._themeService);
                 getColorPresentations(editorModel, colorInfo, msg.provider, CancellationToken.None).then(colorPresentations => {
                     model.colorPresentations = colorPresentations || [];
                     if (!this._editor.hasModel()) {
@@ -305,14 +324,17 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
                         if (model.presentation.textEdit) {
                             textEdits = [model.presentation.textEdit];
                             newRange = new Range(model.presentation.textEdit.range.startLineNumber, model.presentation.textEdit.range.startColumn, model.presentation.textEdit.range.endLineNumber, model.presentation.textEdit.range.endColumn);
-                            newRange = newRange.setEndPosition(newRange.endLineNumber, newRange.startColumn + model.presentation.textEdit.text.length);
+                            const trackedRange = this._editor.getModel()._setTrackedRange(null, newRange, 3 /* GrowsOnlyWhenTypingAfter */);
+                            this._editor.pushUndoStop();
+                            this._editor.executeEdits('colorpicker', textEdits);
+                            newRange = this._editor.getModel()._getTrackedRange(trackedRange) || newRange;
                         }
                         else {
                             textEdits = [{ identifier: null, range, text: model.presentation.label, forceMoveMarkers: false }];
                             newRange = range.setEndPosition(range.endLineNumber, range.startColumn + model.presentation.label.length);
+                            this._editor.pushUndoStop();
+                            this._editor.executeEdits('colorpicker', textEdits);
                         }
-                        this._editor.pushUndoStop();
-                        this._editor.executeEdits('colorpicker', textEdits);
                         if (model.presentation.additionalTextEdits) {
                             textEdits = [...model.presentation.additionalTextEdits];
                             this._editor.executeEdits('colorpicker', textEdits);
@@ -356,8 +378,8 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
                         .forEach(contents => {
                         const markdownHoverElement = $('div.hover-row.markdown-hover');
                         const hoverContentsElement = dom.append(markdownHoverElement, $('div.hover-contents'));
-                        const renderer = markdownDisposeables.add(new MarkdownRenderer(this._editor, this._modeService, this._openerService));
-                        markdownDisposeables.add(renderer.onDidRenderCodeBlock(() => {
+                        const renderer = markdownDisposeables.add(new MarkdownRenderer({ editor: this._editor }, this._modeService, this._openerService));
+                        markdownDisposeables.add(renderer.onDidRenderAsync(() => {
                             hoverContentsElement.className = 'hover-contents code-hover-contents';
                             this._hover.onContentsChanged();
                         }));
@@ -458,24 +480,30 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
                 }
             }));
         }
-        if (!this._editor.getOption(72 /* readOnly */)) {
+        if (!this._editor.getOption(75 /* readOnly */)) {
             const quickfixPlaceholderElement = dom.append(actionsElement, $('div'));
-            quickfixPlaceholderElement.style.opacity = '0';
-            quickfixPlaceholderElement.style.transition = 'opacity 0.2s';
-            setTimeout(() => quickfixPlaceholderElement.style.opacity = '1', 200);
-            quickfixPlaceholderElement.textContent = nls.localize('checkingForQuickFixes', "Checking for quick fixes...");
-            disposables.add(toDisposable(() => quickfixPlaceholderElement.remove()));
+            if (this.recentMarkerCodeActionsInfo) {
+                if (IMarkerData.makeKey(this.recentMarkerCodeActionsInfo.marker) === IMarkerData.makeKey(markerHover.marker)) {
+                    if (!this.recentMarkerCodeActionsInfo.hasCodeActions) {
+                        quickfixPlaceholderElement.textContent = nls.localize('noQuickFixes', "No quick fixes available");
+                    }
+                }
+                else {
+                    this.recentMarkerCodeActionsInfo = undefined;
+                }
+            }
+            const updatePlaceholderDisposable = this.recentMarkerCodeActionsInfo && !this.recentMarkerCodeActionsInfo.hasCodeActions ? Disposable.None : disposables.add(disposableTimeout(() => quickfixPlaceholderElement.textContent = nls.localize('checkingForQuickFixes', "Checking for quick fixes..."), 200));
             const codeActionsPromise = this.getCodeActions(markerHover.marker);
             disposables.add(toDisposable(() => codeActionsPromise.cancel()));
             codeActionsPromise.then(actions => {
-                quickfixPlaceholderElement.style.transition = '';
-                quickfixPlaceholderElement.style.opacity = '1';
-                if (!actions.validActions.length) {
+                updatePlaceholderDisposable.dispose();
+                this.recentMarkerCodeActionsInfo = { marker: markerHover.marker, hasCodeActions: actions.validActions.length > 0 };
+                if (!this.recentMarkerCodeActionsInfo.hasCodeActions) {
                     actions.dispose();
                     quickfixPlaceholderElement.textContent = nls.localize('noQuickFixes', "No quick fixes available");
                     return;
                 }
-                quickfixPlaceholderElement.remove();
+                quickfixPlaceholderElement.style.display = 'none';
                 let showing = false;
                 disposables.add(toDisposable(() => {
                     if (!showing) {

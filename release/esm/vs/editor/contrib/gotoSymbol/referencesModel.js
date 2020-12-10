@@ -37,7 +37,14 @@ export class OneReference {
         this._rangeCallback(this);
     }
     get ariaMessage() {
-        return localize('aria.oneReference', "symbol in {0} on line {1} at column {2}", basename(this.uri), this.range.startLineNumber, this.range.startColumn);
+        var _a;
+        const preview = (_a = this.parent.getPreview(this)) === null || _a === void 0 ? void 0 : _a.preview(this.range);
+        if (!preview) {
+            return localize('aria.oneReference', "symbol in {0} on line {1} at column {2}", basename(this.uri), this.range.startLineNumber, this.range.startColumn);
+        }
+        else {
+            return localize('aria.oneReference.preview', "symbol in {0} on line {1} at column {2}, {3}", basename(this.uri), this.range.startLineNumber, this.range.startColumn, preview.value);
+        }
     }
 }
 export class FilePreview {
