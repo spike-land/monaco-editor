@@ -4,7 +4,7 @@ module.exports = {
     mode: 'production',
     entry: {
         "core": './ci/core.js',
-        "editor.worker": './vscode/out-monaco-editor-core/esm/vs/editor/editor.worker.js',
+        "editor.worker": './noede_modules/@zedvision/monaco-editor-core/esm/vs/editor/editor.worker.js',
         "json.worker": 'monaco-json/release/esm/json.worker',
         "css.worker": 'monaco-css/release/esm/css.worker',
         "html.worker": 'monaco-html/release/esm/html.worker',
@@ -37,8 +37,8 @@ module.exports = {
     },
     resolve: {
         alias: {
-            'monaco-editor-core/esm/vs/editor/editor.worker': path.resolve(__dirname, '../vscode/out-monaco-editor-core/esm/vs/editor/editor.worker.js'),
-            'monaco-editor-core': path.resolve(__dirname, '../vscode/out-monaco-editor-core/esm/vs/editor/editor.main.js'),
+            '@zedvision/monaco-editor-core/esm/vs/editor/editor.worker': path.resolve(__dirname, '../node_modules/@zedvision/monaco-editor-core/esm/vs/editor/editor.worker.js'),
+            '@zedvision/monaco-editor-core': path.resolve(__dirname, '../node_modules/@zedvision/monaco-editor-core/esm/vs/editor/editor.main.js'),
         }
     },
     stats: {

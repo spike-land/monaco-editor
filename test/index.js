@@ -1,4 +1,4 @@
-/// <reference path="../node_modules/monaco-editor-core/monaco.d.ts" />
+/// <reference path="../node_modules/@zedvision/monaco-editor-core/monaco.d.ts" />
 define(['require', './samples'], function(require, SAMPLES) {
 
 var domutils = require('vs/base/browser/dom');

@@ -8,7 +8,7 @@ These packages are described in the root file called `metadata.js` and it is pos
 
 | repository | npm module | explanation |
 |------------|------------|-------------|
-| [vscode](https://github.com/Microsoft/vscode) | [monaco-editor-core](https://www.npmjs.com/package/monaco-editor-core) | editor core functionality (language agnostic) is shipped out of vscode. |
+| [vscode](https://github.com/Microsoft/vscode) | [@zedvision/monaco-editor-core](https://www.npmjs.com/package/@zedvision/monaco-editor-core) | editor core functionality (language agnostic) is shipped out of vscode. |
 | [monaco-languages](https://github.com/Microsoft/monaco-languages) | [monaco-languages](https://www.npmjs.com/package/monaco-languages) | plugin that adds colorization and basic supports for dozens of languages. |
 | [monaco-typescript](https://github.com/Microsoft/monaco-typescript) | [monaco-typescript](https://www.npmjs.com/package/monaco-typescript) | plugin that adds rich language support for JavaScript and TypeScript. |
 | [monaco-css](https://github.com/Microsoft/monaco-css) | [monaco-css](https://www.npmjs.com/package/monaco-css) | plugin that adds rich language support for CSS, LESS and SCSS. |
@@ -115,13 +115,13 @@ Open [http://localhost:8080/monaco-editor/test/?editor=src&monaco-typescript=src
 #### 0.
 * make sure you have `https://github.com/microsoft/vscode-loc` checked out next to the `vscode` folder.
 
-#### 1. Ship a new `monaco-editor-core` npm module
+#### 1. Ship a new `@zedvision/monaco-editor-core` npm module
 * bump version in `/src/vscode/build/monaco/package.json`
 * **[important]** push all local changes to the remote to get a good public commit id.
 * generate npm package `/src/vscode> node_modules/.bin/gulp editor-distro`
-* publish npm package `/src/vscode/out-monaco-editor-core> npm publish`
+* publish npm package `/src/node_modules/@zedvision/monaco-editor-core> npm publish`
 
-#### 2. Adopt new `monaco-editor-core` in plugins
+#### 2. Adopt new `@zedvision/monaco-editor-core` in plugins
 * if there are breaking API changes that affect the language plugins, adopt the new API in:
   * [repo - monaco-typescript](https://github.com/Microsoft/monaco-typescript)
   * [repo - monaco-languages](https://github.com/Microsoft/monaco-languages)
@@ -132,7 +132,7 @@ Open [http://localhost:8080/monaco-editor/test/?editor=src&monaco-typescript=src
 
 #### 3. Update package.json
 * edit `/src/monaco-editor/package.json` and update the version (as necessary):
-  * [npm - monaco-editor-core](https://www.npmjs.com/package/monaco-editor-core)
+  * [npm - @zedvision/monaco-editor-core](https://www.npmjs.com/package/@zedvision/monaco-editor-core)
   * [npm - monaco-typescript](https://www.npmjs.com/package/monaco-typescript)
   * [npm - monaco-languages](https://www.npmjs.com/package/monaco-languages)
   * [npm - monaco-css](https://www.npmjs.com/package/monaco-css)

@@ -1,4 +1,4 @@
-import * as monaco from 'monaco-editor-core';
+import * as monaco from '@zedvision/monaco-editor-core';
 
 self.MonacoEnvironment = {
     getWorkerUrl: function (moduleId, label) {

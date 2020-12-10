@@ -36,7 +36,7 @@ jobs:
           yarn init -yp
           yarn add typescript
           yarn tsc --init
-          echo "import '../vscode/out-monaco-editor-core';" > a.ts
+          echo "import '../node_modules/@zedvision/monaco-editor-core';" > a.ts
           yarn tsc --noEmit
       - name: NPM Install
         run: npm install
