@@ -1,6 +1,6 @@
 {
   "name": "@zedvision/monaco-editor",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "description": "A browser based code editor",
   "author": "Microsoft Corporation",
   "license": "MIT",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.14",
     "@types/mocha": "^8.2.0",
+    "@zedvision/monaco-editor-core": "8.3.1",
     "chai": "^4.2.0",
     "clean-css": "^4.2.3",
     "css-loader": "^5.0.1",
@@ -35,7 +36,6 @@
     "gulp-typedoc": "^2.2.7",
     "mocha": "^8.2.1",
     "monaco-css": "3.1.1",
-    "@zedvision/monaco-editor-core": "8.3.1",
     "monaco-html": "3.1.1",
     "monaco-json": "3.2.1",
     "monaco-languages": "2.1.1",
