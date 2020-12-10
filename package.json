@@ -1,10 +1,12 @@
 {
   "name": "@zedvision/monaco-editor",
-  "private": true,
   "version": "0.21.2",
   "description": "A browser based code editor",
   "author": "Microsoft Corporation",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "simpleserver": "gulp simpleserver",
     "release": "gulp release",
